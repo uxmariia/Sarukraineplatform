@@ -242,9 +242,6 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
                 className="bg-white shadow-sm rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all duration-300 hover:shadow-lg"
               >
                   <div className="flex items-start gap-4 flex-1">
-                      <div className="bg-blue-100 p-4 rounded-xl">
-                          <FileText className="w-7 h-7 text-blue-600" />
-                      </div>
                       <div className="flex-1">
                           <h3 className="text-base md:text-xl text-gray-900 mb-2 font-semibold">{doc.title}</h3>
                           {doc.description && (
