@@ -243,7 +243,7 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
               >
                   <div className="flex items-start gap-4 flex-1">
                       <div className="flex-1">
-                          <h3 className="text-base md:text-xl text-gray-900 mb-2 font-semibold">{doc.title}</h3>
+                          <h3 className="text-[18px] md:text-[20px] text-gray-900 mb-2 font-semibold">{doc.title}</h3>
                           {doc.description && (
                               <p className="text-base text-gray-600 mb-3 leading-relaxed">{doc.description}</p>
                           )}
