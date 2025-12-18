@@ -1,51 +1,85 @@
 import { supabase } from './supabase/client';
-import { projectId, publicAnonKey } from './supabase/info';
+import { supabaseUrl, publicAnonKey } from './supabase/info';
 
-const API_URL = `https://${projectId}.supabase.co/functions/v1/make-server-5f926218`;
+const API_URL = `${supabaseUrl}/functions/v1/make-server-5f926218`;
+
+// Public endpoints that don't require authentication
+const PUBLIC_ENDPOINTS = [
+  '/competitions', // GET /competitions - list all
+  '/judges',       // GET /judges - list all
+  '/teams',        // GET /teams - list all
+  '/documents',    // GET /documents - list all
+  '/signup',       // POST /signup
+  '/rating'        // GET /rating - list rating
+];
+
+const PUBLIC_ENDPOINT_PATTERNS = [
+  /^\/competitions\/[^\/]+\/results$/, // GET /competitions/:id/results
+];
+
+const isPublicEndpoint = (endpoint: string, method: string = 'GET'): boolean => {
+  // Check exact matches for collection endpoints (GET only)
+  if (method === 'GET' && PUBLIC_ENDPOINTS.includes(endpoint)) {
+    return true;
+  }
+  
+  // Check signup endpoint (POST)
+  if (endpoint === '/signup' && method === 'POST') {
+    return true;
+  }
+  
+  // Check pattern matches (e.g., /competitions/:id/results)
+  return PUBLIC_ENDPOINT_PATTERNS.some(pattern => pattern.test(endpoint));
+};
 
 export const apiRequest = async (endpoint: string, method = 'GET', body?: any, token?: string) => {
   console.log(`[apiRequest] Starting request to ${endpoint}`, { method, hasBody: !!body, hasToken: !!token });
   
-  if (!token) {
-    // Try to get session token, with retry logic for race conditions
-    let retries = 3;
-    let session = null;
+  const isPublic = isPublicEndpoint(endpoint, method);
+  
+  if (!token && !isPublic) {
+    // Try to get session token only for protected endpoints
+    console.log('[apiRequest] No token provided, attempting to get session...');
     
-    while (retries > 0 && !session) {
-      const { data, error } = await supabase.auth.getSession();
-      
-      if (error) {
-        console.error('[apiRequest] Error getting session:', error);
-      }
-      
-      session = data.session;
-      
-      if (!session && retries > 1) {
-        console.warn(`[apiRequest] No session found, retrying... (${retries - 1} retries left)`);
-        // Wait a bit for session to be ready
-        await new Promise(resolve => setTimeout(resolve, 200));
-      }
-      retries--;
+    // First, try getSession
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    
+    if (sessionError) {
+      console.error('[apiRequest] Error getting session:', sessionError);
     }
     
-    token = session?.access_token;
-    
-    if (!token) {
-      console.error('[apiRequest] CRITICAL: No token available after all retries for', endpoint);
-      console.log('[apiRequest] Session state:', session ? 'Session exists but no token' : 'No session');
+    if (session?.access_token) {
+      token = session.access_token;
+      console.log('[apiRequest] ✓ Got token from getSession');
     } else {
-      console.log('[apiRequest] ✓ Got token from session for', endpoint);
-      console.log('[apiRequest] Token preview:', token.substring(0, 30) + '...');
-      console.log('[apiRequest] Token length:', token.length);
+      // If no session, try refreshing
+      console.log('[apiRequest] No session found, trying to refresh...');
+      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+      
+      if (refreshError) {
+        console.error('[apiRequest] Error refreshing session:', refreshError);
+      }
+      
+      if (refreshedSession?.access_token) {
+        token = refreshedSession.access_token;
+        console.log('[apiRequest] ✓ Got token from refreshSession');
+      } else {
+        console.error('[apiRequest] CRITICAL: No token available after all attempts for', endpoint);
+        console.log('[apiRequest] User needs to log in again');
+      }
     }
-  } else {
+  } else if (isPublic && !token) {
+    console.log('[apiRequest] ℹ️ Public endpoint, using ANON_KEY');
+  } else if (token) {
     console.log('[apiRequest] ✓ Using provided token for', endpoint);
   }
 
   const authValue = token || publicAnonKey;
   const isUsingAnonKey = authValue === publicAnonKey;
   
-  console.log('[apiRequest] Authorization type:', isUsingAnonKey ? '⚠️ ANON_KEY (no auth)' : '✓ USER_TOKEN');
+  if (!isPublic) {
+    console.log('[apiRequest] Authorization type:', isUsingAnonKey ? '⚠️ ANON_KEY (no auth)' : '✓ USER_TOKEN');
+  }
 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
@@ -63,7 +97,6 @@ export const apiRequest = async (endpoint: string, method = 'GET', body?: any, t
   console.log('[apiRequest] Response status:', response.status);
 
   if (!response.ok) {
-    // If 401, unexpected logout might have happened
     const error = await response.json().catch(() => ({ error: 'Unknown error' }));
     console.error('[apiRequest] ❌ Request failed:', { 
       endpoint, 

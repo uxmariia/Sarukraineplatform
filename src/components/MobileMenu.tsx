@@ -44,7 +44,7 @@ export default function MobileMenu({
       ];
 
   return (
-    <div className="fixed top-[73px] left-0 right-0 bg-gradient-to-b from-[rgba(15,23,42,0.98)] to-[rgba(30,41,59,0.98)] backdrop-blur-[20px] p-5 border-b border-[rgba(99,102,241,0.3)] shadow-[0_10px_40px_rgba(0,0,0,0.5)] animate-[slideDown_0.3s_ease] z-[99] md:hidden">
+    <div className="fixed top-[73px] left-0 right-0 bg-white border-b border-gray-200 p-5 shadow-lg animate-[slideDown_0.3s_ease] z-[99] md:hidden">
       <nav className="flex flex-col gap-2">
         {navItems.map((item) => (
           <button
@@ -52,8 +52,8 @@ export default function MobileMenu({
             className={`w-full justify-start px-[18px] py-[14px] rounded-lg cursor-pointer transition-all duration-300 flex items-center gap-2 border
               ${
                 currentPage === item.page
-                  ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-transparent'
-                  : 'bg-[rgba(30,41,59,0.6)] border-[rgba(99,102,241,0.2)] hover:bg-[rgba(99,102,241,0.2)] hover:border-[rgba(99,102,241,0.4)] text-slate-400'
+                  ? 'bg-[#007AFF] text-white border-transparent'
+                  : 'bg-gray-50 border-gray-200 hover:bg-gray-100 hover:border-gray-300 text-gray-700'
               }`}
             onClick={() => onPageChange(item.page)}
           >
@@ -63,7 +63,7 @@ export default function MobileMenu({
 
         {isLoggedIn ? (
           <button
-            className="block w-full mt-3 px-6 py-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
+            className="block w-full mt-3 px-6 py-[10px] bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-lg cursor-pointer transition-all duration-300"
             onClick={onLogout}
           >
             Вийти
@@ -71,13 +71,13 @@ export default function MobileMenu({
         ) : (
           <>
             <button
-              className="block w-full mt-3 px-6 py-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(99,102,241,0.3)]"
+              className="block w-full mt-3 px-6 py-[10px] bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-lg cursor-pointer transition-all duration-300"
               onClick={() => onPageChange('login')}
             >
               Увійти
             </button>
             <button
-              className="block w-full mt-2 px-6 py-[10px] bg-[rgba(255,255,255,0.05)] text-white border-2 border-[rgba(99,102,241,0.3)] rounded-lg cursor-pointer transition-all duration-300 backdrop-blur-[10px]"
+              className="block w-full mt-2 px-6 py-[10px] bg-white hover:bg-gray-50 text-gray-900 border-2 border-gray-300 hover:border-gray-400 rounded-lg cursor-pointer transition-all duration-300"
               onClick={() => onPageChange('register')}
             >
               Реєстрація

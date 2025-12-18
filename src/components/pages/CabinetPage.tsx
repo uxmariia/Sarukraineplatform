@@ -164,35 +164,37 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
     <>
       <div className="max-w-[1400px] mx-auto px-6 py-[60px]">
         <div className="mb-12 text-left">
-          <h1 className="text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
             Мій кабінет
           </h1>
-          <p className="text-lg text-slate-400">Керування вашим профілем та даними</p>
+          <p className="text-lg text-gray-600">Керування вашим профілем та даними</p>
         </div>
 
-        <div className="flex gap-3 mb-8 flex-wrap border-b-2 border-[rgba(99,102,241,0.2)] pb-0">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              className={`px-6 py-3 bg-transparent border-none border-b-[3px] cursor-pointer transition-all duration-300 mb-[-2px] text-base ${
-                activeSection === tab.id
-                  ? 'text-white border-b-indigo-500'
-                  : 'text-slate-400 border-b-transparent hover:text-white'
-              }`}
-              onClick={() => setActiveSection(tab.id as any)}
-            >
-              {tab.label}
-            </button>
-          ))}
-        </div>
+        {userProfile?.role === 'user' && (
+          <div className="flex gap-3 mb-8 flex-wrap border-b-2 border-gray-200 pb-0">
+            {tabs.map(tab => (
+              <button
+                key={tab.id}
+                className={`px-6 py-3 bg-transparent border-none border-b-[3px] cursor-pointer transition-all duration-300 mb-[-2px] text-base ${
+                  activeSection === tab.id
+                    ? 'text-gray-900 border-b-[#007AFF]'
+                    : 'text-gray-500 border-b-transparent hover:text-gray-900'
+                }`}
+                onClick={() => setActiveSection(tab.id as any)}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        )}
 
         {activeSection === 'registrations' && (
           registrations.length === 0 ? (
-          <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-[100px_40px] text-center">
-            <ClipboardList className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-            <p className="text-lg text-slate-500 mb-6">Ви ще не реєструвалися на жодні змагання</p>
+          <div className="bg-white shadow-sm rounded-[20px] p-[100px_40px] text-center">
+            <ClipboardList className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+            <p className="text-lg text-gray-500 mb-6">Ви ще не реєструвалися на жодні змагання</p>
             <button
-              className="mt-5 px-10 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 flex items-center gap-2 mx-auto shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:translate-y-[-3px] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)] text-base"
+              className="mt-5 px-10 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 flex items-center gap-2 mx-auto text-base"
               onClick={() => onPageChange('competitions')}
             >
               Дивитись актуальні змагання <ArrowRight className="w-4 h-4" />
@@ -201,10 +203,10 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
           ) : (
             <div className="grid gap-4">
                 {registrations.map((reg, idx) => (
-                    <div key={idx} className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-6 flex flex-col md:flex-row gap-6 justify-between items-center transition-all hover:border-[rgba(99,102,241,0.5)]">
+                    <div key={idx} className="bg-white shadow-sm rounded-2xl p-6 flex flex-col md:flex-row gap-6 justify-between items-center transition-all hover:shadow-lg">
                         <div className="flex-1">
-                            <h3 className="text-xl text-white font-bold mb-2 font-normal text-[24px]">{reg.competitionName}</h3>
-                            <div className="text-slate-400 text-base flex flex-wrap gap-4 mb-3">
+                            <h3 className="text-xl text-gray-900 font-semibold mb-2 text-[24px]">{reg.competitionName}</h3>
+                            <div className="text-gray-600 text-base flex flex-wrap gap-4 mb-3">
                                 <span className="flex items-center gap-1.5">
                                     <Calendar className="w-4 h-4" />
                                     {new Date(reg.startDate).toLocaleDateString('uk-UA')}
@@ -215,39 +217,39 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
                                 </span>
                             </div>
                             <div className="flex flex-wrap gap-3 text-base">
-                                <span className="bg-slate-800/50 px-3 py-1 rounded-lg text-slate-300 border border-slate-700/50 flex items-center gap-1.5">
+                                <span className="bg-gray-100 px-3 py-1 rounded-lg text-gray-700 flex items-center gap-1.5">
                                     <ClipboardList className="w-4 h-4" />
                                     {reg.dogName}
                                 </span>
                                 {(reg.class || reg.className || reg.participationClass) && (
-                                    <span className="bg-purple-500/20 px-3 py-1 rounded-lg text-purple-300 border border-purple-500/30 flex items-center gap-1.5">
+                                    <span className="bg-purple-100 px-3 py-1 rounded-lg text-purple-700 flex items-center gap-1.5">
                                         Клас: {reg.class || reg.className || reg.participationClass}
                                     </span>
                                 )}
                                 {reg.category && (
-                                    <span className="bg-indigo-500/20 px-3 py-1 rounded-lg text-indigo-300 border border-indigo-500/30 flex items-center gap-1.5">
+                                    <span className="bg-blue-100 px-3 py-1 rounded-lg text-blue-700 flex items-center gap-1.5">
                                         <Trophy className="w-4 h-4" />
                                         {reg.category}
                                     </span>
                                 )}
                                 {reg.documents && reg.documents.length > 0 && (
-                                    <span className="bg-green-500/10 px-3 py-1 rounded-lg text-green-400 border border-green-500/20 flex items-center gap-1.5">
+                                    <span className="bg-green-100 px-3 py-1 rounded-lg text-green-700 flex items-center gap-1.5">
                                         <Paperclip className="w-4 h-4" />
                                         Документи: {reg.documents.length}
                                     </span>
                                 )}
                             </div>
                             {reg.status === 'rejected' && reg.notes && (
-                                <div className="mt-3 bg-red-500/10 border border-red-500/20 rounded-lg p-3 text-base text-red-300">
+                                <div className="mt-3 bg-red-50 border border-red-200 rounded-lg p-3 text-base text-red-700">
                                     <strong>Причина відмови:</strong> {reg.notes}
                                 </div>
                             )}
                         </div>
                         <div className="w-full md:w-auto text-center md:text-right">
-                            <span className={`inline-block px-4 py-2 rounded-xl text-base font-medium border ${
-                                reg.status === 'confirmed' ? 'bg-green-500/20 text-green-400 border-green-500/30' :
-                                reg.status === 'rejected' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-                                'bg-yellow-500/20 text-yellow-400 border-yellow-500/30'
+                            <span className={`inline-block px-4 py-2 rounded-xl text-base font-medium ${
+                                reg.status === 'confirmed' ? 'bg-green-100 text-green-700' :
+                                reg.status === 'rejected' ? 'bg-red-100 text-red-700' :
+                                'bg-yellow-100 text-yellow-700'
                             }`}>
                                 {reg.status === 'confirmed' ? 'Підтверджено' : 
                                  reg.status === 'rejected' ? 'Відхилено' : 'Очікує підтвердження'}
@@ -262,23 +264,23 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
         {activeSection === 'dogs' && (
           <>
             <button
-              className="mb-6 px-7 py-[14px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-[10px] cursor-pointer transition-all duration-300 inline-flex items-center gap-2 hover:translate-y-[-2px] hover:shadow-[0_6px_20px_rgba(99,102,241,0.4)] text-base"
+              className="mb-6 px-7 py-[14px] bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-[10px] cursor-pointer transition-all duration-300 inline-flex items-center gap-2 text-base"
               onClick={() => openDogModal()}
             >
               <Plus className="w-4 h-4" /> Додати собаку
             </button>
 
             {dogs.length === 0 ? (
-              <p className="text-slate-400 text-center py-10 text-base">Ви ще не додали жодної собаки</p>
+              <p className="text-gray-500 text-center py-10 text-base">Ви ще не додали жодної собаки</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {dogs.map(dog => (
                   <div
                     key={dog.id}
-                    className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-6 transition-all duration-300 hover:border-[rgba(99,102,241,0.5)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.2)]"
+                    className="bg-white shadow-sm rounded-2xl p-6 transition-all duration-300 hover:shadow-lg"
                   >
-                    <h3 className="text-white mb-4 text-xl">{dog.name}</h3>
-                    <div className="text-base text-slate-400 leading-relaxed mb-4">
+                    <h3 className="text-gray-900 mb-4 text-xl font-semibold">{dog.name}</h3>
+                    <div className="text-base text-gray-600 leading-relaxed mb-4">
                       <p className="my-2"><strong>Дата народження:</strong> {new Date(dog.birth).toLocaleDateString('uk-UA')}</p>
                       <p className="my-2"><strong>Стать:</strong> {dog.gender === 'male' ? 'Кобель' : 'Сука'}</p>
                       <p className="my-2"><strong>Родовід:</strong> {dog.pedigree}</p>
@@ -287,13 +289,13 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
                     </div>
                     <div className="flex gap-2">
                       <button
-                        className="flex-1 px-[10px] py-[10px] border-none rounded-lg cursor-pointer transition-all duration-300 bg-[rgba(99,102,241,0.15)] text-indigo-300 hover:bg-[rgba(99,102,241,0.25)] text-base"
+                        className="flex-1 px-[10px] py-[10px] border-none rounded-lg cursor-pointer transition-all duration-300 bg-blue-100 text-blue-700 hover:bg-blue-200 text-base"
                         onClick={() => openDogModal(dog.id)}
                       >
                         Редагувати
                       </button>
                       <button
-                        className="flex-1 px-[10px] py-[10px] border-none rounded-lg cursor-pointer transition-all duration-300 bg-[rgba(239,68,68,0.15)] text-red-300 hover:bg-[rgba(239,68,68,0.25)] text-base"
+                        className="flex-1 px-[10px] py-[10px] border-none rounded-lg cursor-pointer transition-all duration-300 bg-red-100 text-red-700 hover:bg-red-200 text-base"
                         onClick={() => deleteDog(dog.id)}
                       >
                         Видалити
@@ -309,25 +311,25 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
         {activeSection === 'profile' && (
           <>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-8 p-[24px]">
-                <h3 className="text-white mb-6 text-xl">Особисті дані</h3>
+              <div className="bg-white shadow-sm rounded-2xl p-8 p-[24px]">
+                <h3 className="text-gray-900 mb-6 text-xl font-semibold">Особисті дані</h3>
                 <form onSubmit={saveProfile}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
-                      <label className="block text-base text-gray-200 mb-2">Ім'я і прізвище</label>
+                      <label className="block text-base text-gray-900 mb-2 font-medium">Ім'я і прізвище</label>
                       <input
                         type="text"
-                        className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                        className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                         value={profileForm.name}
                         onChange={e => setProfileForm({...profileForm, name: e.target.value})}
                         required
                       />
                     </div>
                     <div>
-                      <label className="block text-base text-gray-200 mb-2">Телефон</label>
+                      <label className="block text-base text-gray-900 mb-2 font-medium">Телефон</label>
                       <input
                         type="tel"
-                        className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                        className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                         placeholder="+380"
                         value={profileForm.phone}
                         onChange={e => setProfileForm({...profileForm, phone: e.target.value})}
@@ -336,84 +338,84 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
                     <div>
-                        <label className="block text-base text-gray-200 mb-2">Місто</label>
+                        <label className="block text-base text-gray-900 mb-2 font-medium">Місто</label>
                         <input
                             type="text"
-                            className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                            className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                             placeholder="Київ"
                             value={profileForm.city}
                             onChange={e => setProfileForm({...profileForm, city: e.target.value})}
                         />
                     </div>
                     <div>
-                      <label className="block text-base text-gray-200 mb-2">Команда</label>
+                      <label className="block text-base text-gray-900 mb-2 font-medium">Команда</label>
                       <select
-                         className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base cursor-pointer"
+                         className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base cursor-pointer"
                          value={profileForm.team}
                          onChange={e => setProfileForm({...profileForm, team: e.target.value})}
                       >
-                        <option value="" className="bg-slate-900">Оберіть команду</option>
+                        <option value="" className="bg-white">Оберіть команду</option>
                         {teams.map((team) => (
-                          <option key={team.id} value={team.name} className="bg-slate-900">
+                          <option key={team.id} value={team.name} className="bg-white">
                             {team.name}
                           </option>
                         ))}
-                        <option value="Команди немає в списку" className="bg-slate-900">Команди немає в списку</option>
+                        <option value="Команди немає в списку" className="bg-white">Команди немає в списку</option>
                       </select>
                     </div>
                   </div>
                   <div className="mb-5">
-                     <label className="block text-base text-gray-200 mb-2">Кінологічний клуб КСУ</label>
+                     <label className="block text-base text-gray-900 mb-2 font-medium">Кінологічний клуб КСУ</label>
                       <input
                         type="text"
-                        className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                        className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                         placeholder="Назва клубу"
                         value={profileForm.club}
                         onChange={e => setProfileForm({...profileForm, club: e.target.value})}
                       />
                   </div>
                   <div className="mb-5">
-                    <label className="block text-base text-gray-200 mb-2">Email (не можна змінити)</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Email (не можна змінити)</label>
                     <input
                       type="email"
-                      className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 opacity-60 cursor-not-allowed text-base"
+                      className="w-full px-4 py-[14px] bg-gray-100 border border-gray-300 rounded-[10px] text-gray-500 transition-all duration-300 opacity-60 cursor-not-allowed text-base"
                       value={userProfile?.email || ''}
                       disabled
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full px-4 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 mt-6 hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] text-base"
+                    className="w-full px-4 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 mt-6 text-base"
                   >
                     Зберегти зміни
                   </button>
                 </form>
               </div>
 
-              <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-8 p-[24px]">
-                <h3 className="text-white mb-6 text-xl">Зміна пароля</h3>
+              <div className="bg-white shadow-sm rounded-2xl p-8 p-[24px]">
+                <h3 className="text-gray-900 mb-6 text-xl font-semibold">Зміна пароля</h3>
                 <form onSubmit={changePassword}>
                   <div className="mb-5">
-                    <label className="block text-base text-gray-200 mb-2">Новий пароль</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Новий пароль</label>
                     <input
                       name="new_password"
                       type="password"
-                      className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                      className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                       required
                     />
                   </div>
                   <div className="mb-5">
-                    <label className="block text-base text-gray-200 mb-2">Підтвердження нового пароля</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Підтвердження нового пароля</label>
                     <input
                       name="confirm_password"
                       type="password"
-                      className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                      className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base"
                       required
                     />
                   </div>
                   <button
                     type="submit"
-                    className="w-full px-4 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 mt-6 hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] text-base"
+                    className="w-full px-4 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 mt-6 text-base"
                   >
                     Змінити пароль
                   </button>
@@ -422,17 +424,17 @@ export default function CabinetPage({ userProfile, setUserProfile, onPageChange,
             </div>
 
             <div className="mt-8">
-              <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-3xl p-12 text-center px-[24px] py-[48px]">
+              <div className="bg-white shadow-sm rounded-3xl p-12 text-center px-[24px] py-[48px]">
                 <div className="flex items-center justify-center gap-2 mb-4">
-                  <MessageCircle className="w-6 h-6 text-white" />
-                  <h3 className="text-white text-xl">Технічна підтримка</h3>
+                  <MessageCircle className="w-6 h-6 text-gray-900" />
+                  <h3 className="text-gray-900 text-xl font-semibold">Технічна підтримка</h3>
                 </div>
-                <p className="text-slate-400 mb-6 text-base">
+                <p className="text-gray-600 mb-6 text-base">
                   Маєте питання щодо роботи платформи? Зв'яжіться з нами:
                 </p>
                 <a
                   href="mailto:support@sar-ukraine.com"
-                  className="inline-flex items-center gap-3 px-7 py-[14px] bg-[rgba(99,102,241,0.15)] border border-[rgba(99,102,241,0.3)] rounded-xl text-indigo-300 no-underline transition-all duration-300 hover:bg-[rgba(99,102,241,0.25)] hover:border-[rgba(99,102,241,0.5)] hover:translate-y-[-2px] text-base"
+                  className="inline-flex items-center gap-3 px-7 py-[14px] bg-gray-100 hover:bg-gray-200 rounded-xl text-[#007AFF] no-underline transition-all duration-300 text-base"
                 >
                   <Mail className="w-5 h-5" /> support@sar-ukraine.com
                 </a>

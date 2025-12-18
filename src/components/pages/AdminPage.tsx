@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { apiRequest } from '../../utils/api';
 import { UserProfile, UserRole } from '../../types';
+import { supabase } from '../../utils/supabase/client';
 import {
   Table,
   TableBody,
@@ -70,11 +71,11 @@ export default function AdminPage({ userProfile, showToast }: AdminPageProps) {
   const getRoleBadgeColor = (role: UserRole) => {
     switch (role) {
       case 'admin':
-        return 'bg-red-500 hover:bg-red-600';
+        return 'bg-red-100 text-red-700 hover:bg-red-200';
       case 'organizer':
-        return 'bg-purple-500 hover:bg-purple-600';
+        return 'bg-purple-100 text-purple-700 hover:bg-purple-200';
       default:
-        return 'bg-blue-500 hover:bg-blue-600';
+        return 'bg-blue-100 text-blue-700 hover:bg-blue-200';
     }
   };
 
@@ -95,8 +96,8 @@ export default function AdminPage({ userProfile, showToast }: AdminPageProps) {
     return (
       <div className="min-h-screen pt-24 px-6 flex justify-center">
         <div className="text-center">
-          <h1 className="text-2xl font-bold text-white mb-4">Доступ заборонено</h1>
-          <p className="text-slate-400">У вас немає прав для перегляду цієї сторінки.</p>
+          <h1 className="text-gray-900 mb-4">Доступ заборонено</h1>
+          <p className="text-gray-600">У вас немає прав для перегляду цієї сторінки.</p>
         </div>
       </div>
     );
@@ -106,47 +107,47 @@ export default function AdminPage({ userProfile, showToast }: AdminPageProps) {
     <div className="min-h-screen pt-[60px] px-[24px] pb-[48px] max-w-[1400px] mx-auto pr-[24px] pl-[24px] py-[60px]">
       <div className="flex items-center gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-white font-normal text-[40px]">Адміністрування</h1>
-          <p className="text-slate-400 text-[18px]">Керування користувачами та ролями</p>
+          <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">Адміністрування</h1>
+          <p className="text-base sm:text-lg text-gray-600">Керування користувачами та ролями</p>
         </div>
       </div>
 
-      <Card className="bg-[#131b31] border-[rgba(99,102,241,0.2)]">
+      <Card className="bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)]">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-white">
-            <Users className="w-5 h-5 text-indigo-400" />
+          <CardTitle className="flex items-center gap-2 text-gray-900">
+            <Users className="w-5 h-5 text-[#007AFF]" />
             Список користувачів
           </CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
             <div className="flex justify-center py-12">
-              <Loader2 className="w-8 h-8 text-indigo-500 animate-spin" />
+              <Loader2 className="w-8 h-8 text-[#007AFF] animate-spin" />
             </div>
           ) : (
             <Table>
               <TableHeader>
-                <TableRow className="border-b border-indigo-500/20 hover:bg-transparent">
-                  <TableHead className="text-slate-400">Користувач</TableHead>
-                  <TableHead className="text-slate-400">Email</TableHead>
-                  <TableHead className="text-slate-400">Поточна роль</TableHead>
-                  <TableHead className="text-slate-400">Дії</TableHead>
+                <TableRow className="border-b border-gray-200 hover:bg-transparent">
+                  <TableHead className="text-gray-700">Користувач</TableHead>
+                  <TableHead className="text-gray-700">Email</TableHead>
+                  <TableHead className="text-gray-700">Поточна роль</TableHead>
+                  <TableHead className="text-gray-700">Дії</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {users.map((user) => (
-                  <TableRow key={user.id} className="border-b border-indigo-500/10 hover:bg-indigo-500/5">
-                    <TableCell className="font-medium text-white">
+                  <TableRow key={user.id} className="border-b border-gray-100 hover:bg-gray-50">
+                    <TableCell className="text-gray-900">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 flex items-center justify-center text-indigo-300">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center text-[#007AFF]">
                           <User className="w-4 h-4" />
                         </div>
                         {user.name || 'Без імені'}
                       </div>
                     </TableCell>
-                    <TableCell className="text-slate-300">{user.email}</TableCell>
+                    <TableCell className="text-gray-700">{user.email}</TableCell>
                     <TableCell>
-                      <Badge className={`${getRoleBadgeColor(user.role)} border-none text-white`}>
+                      <Badge className={`${getRoleBadgeColor(user.role)} border-none`}>
                         {translateRole(user.role)}
                       </Badge>
                     </TableCell>
@@ -156,10 +157,10 @@ export default function AdminPage({ userProfile, showToast }: AdminPageProps) {
                         value={user.role}
                         onValueChange={(value: UserRole) => handleRoleChange(user.id, value)}
                       >
-                        <SelectTrigger className="w-[140px] bg-[#0a0e27] border-indigo-500/30 text-slate-200">
+                        <SelectTrigger className="w-[140px] bg-white border-gray-200 text-gray-900">
                           <SelectValue placeholder="Оберіть роль" />
                         </SelectTrigger>
-                        <SelectContent className="bg-[#1a1f3a] border-indigo-500/30 text-slate-200">
+                        <SelectContent className="bg-white border-gray-200 text-gray-900">
                           <SelectItem value="user">Користувач</SelectItem>
                           <SelectItem value="organizer">Організатор</SelectItem>
                           <SelectItem value="admin">Адміністратор</SelectItem>

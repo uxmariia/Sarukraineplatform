@@ -1,37 +1,38 @@
 import { useState, useEffect } from 'react';
+import { ArrowLeft, Users, FileText, Save, Award, UserCheck, UserX, CheckCircle, XCircle, Eye, Download, Trash2, AlertCircle } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
-import { Competition, UserProfile } from '../../types';
-import { ArrowLeft, Save, Trophy, Calculator, AlertCircle, Check, X, FileText, ExternalLink, Download, Users } from 'lucide-react';
+import { UserProfile, Competition } from '../../types';
+import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Input } from '../ui/input';
+import { Label } from '../ui/label';
+import { Textarea } from '../ui/textarea';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "../ui/table";
-import { Badge } from "../ui/badge";
-import { Button } from "../ui/button";
-import { Input } from "../ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "../ui/card";
-import { PageType } from '../../App';
-import { supabase } from '../../utils/supabase/client';
-import { projectId } from '../../utils/supabase/info';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '../ui/select';
 import {
     Dialog,
     DialogContent,
+    DialogDescription,
+    DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogFooter,
-    DialogDescription,
-} from "../ui/dialog";
-import { Label } from "../ui/label";
-import { Textarea } from "../ui/textarea";
+} from '../ui/dialog';
+import { PageType } from '../../App';
+import { supabase } from '../../utils/supabase/client';
+import { supabaseUrl } from '../../utils/supabase/info';
 
 type ManageCompetitionPageProps = {
     competitionId: string;
     onBack: () => void;
     showToast: (msg: string, type?: any) => void;
+    userProfile: UserProfile;
 };
 
 type ExtendedParticipant = {
@@ -41,6 +42,12 @@ type ExtendedParticipant = {
     userName: string;
     dogName: string;
     dogBirth: string;
+    dogBreed: string;
+    dogPedigree: string;
+    dogChip: string;
+    dogWorkbook?: string;
+    handlerName?: string;
+    handlerId?: string;
     status: string;
     results?: {
         search?: number;
@@ -66,16 +73,16 @@ const DocumentLink = ({ path }: { path: string }) => {
         fetchUrl();
     }, [path]);
 
-    if (!url) return <span className="text-slate-600 text-xs">Завантаження...</span>;
+    if (!url) return <span className="text-gray-400">Завантаження...</span>;
     
     return (
-        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-indigo-400 hover:text-indigo-300 text-base underline">
+        <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#007AFF] hover:text-[#0066CC] underline text-base">
             <FileText size={16} /> Переглянути
         </a>
     );
 };
 
-export default function ManageCompetitionPage({ competitionId, onBack, showToast }: ManageCompetitionPageProps) {
+export default function ManageCompetitionPage({ competitionId, onBack, showToast, userProfile }: ManageCompetitionPageProps) {
     const [competition, setCompetition] = useState<Competition | null>(null);
     const [participants, setParticipants] = useState<ExtendedParticipant[]>([]);
     const [loading, setLoading] = useState(true);
@@ -83,6 +90,7 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
     const [rejectDialog, setRejectDialog] = useState<{open: boolean, userId: string, dogId: string, category?: string, participantId?: string}>({open: false, userId: '', dogId: ''});
     const [rejectReason, setRejectReason] = useState('');
     const [activeTab, setActiveTab] = useState<string | null>(null);
+    const [accessDenied, setAccessDenied] = useState(false);
 
     useEffect(() => {
         loadData();
@@ -107,36 +115,45 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
 
     const loadData = async () => {
         setLoading(true);
+        setAccessDenied(false);
         try {
             const data = await apiRequest(`/competitions/${competitionId}/details`);
             setCompetition(data);
             
             // Initialize participants with categories if not present
-            // If competition has only one category, assign it by default
-            // We do NOT deduplicate here anymore because:
-            // 1. A dog can be registered in multiple categories (different classes)
-            // 2. A dog might have a rejected application and a new pending application
+            // Now 'category' comes from server (mapped from 'class' field)
+            // and 'class' is also present from server
+            // We keep both for compatibility, but 'category' is the primary field for grouping
             
             const processedParticipants: ExtendedParticipant[] = [];
 
             data.participants.forEach((p: ExtendedParticipant) => {
+                // Server now returns 'category' (mapped from 'class')
+                // Keep both fields for compatibility
                 let category = p.category;
+                let assignedClass = p.class;
+                
+                // Fallback: if category is missing, try to assign from competition categories
                 if (!category && data.categories && data.categories.length === 1) {
                     category = data.categories[0];
                 }
                 
-                let assignedClass = p.class;
-                 if (!assignedClass && data.level) {
-                    assignedClass = data.level; // Default to competition level
+                // Fallback: if class is missing, use category or competition level
+                if (!assignedClass) {
+                    assignedClass = category || data.level;
                 }
 
                 processedParticipants.push({ ...p, category, class: assignedClass });
             });
 
             setParticipants(processedParticipants);
-        } catch (e) {
+        } catch (e: any) {
             console.error(e);
-            showToast('Не вдалося завантажити дані змагання', 'error');
+            if (e.message && (e.message.includes('403') || e.message.includes('Forbidden'))) {
+                setAccessDenied(true);
+            } else {
+                showToast('Не вдалося завантажити дані змагання', 'error');
+            }
         } finally {
             setLoading(false);
         }
@@ -242,7 +259,8 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
         
         participants.forEach(p => {
             if (!p.category || !p.class) return;
-            const key = `${p.category}-${p.class}`;
+            // Avoid duplication: if category and class are the same, use only category
+            const key = p.category === p.class ? p.category : `${p.category} - ${p.class}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(p);
         });
@@ -268,17 +286,7 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
 
                 const dateA = a.dogBirth ? new Date(a.dogBirth).getTime() : 0;
                 const dateB = b.dogBirth ? new Date(b.dogBirth).getTime() : 0;
-                return dateB - dateA; // Younger dog (later date) is "greater" -> first? 
-                // Wait, "Younger dog ahead". 
-                // Dog A: 2020 (Younger), Dog B: 2015 (Older).
-                // 2020 > 2015. 
-                // Descending sort (B - A) would put 2020 first? No, A(2020) - B(2015) = positive.
-                // Descending sort: return B - A. If result > 0, B comes first.
-                // We want A (Younger/Larger Timestamp) first.
-                // So if A(2020) and B(2015), we want A first.
-                // Sort should return negative if A < B (A first). 
-                // Wait. sort((a,b) => b - a) sorts Descending (Largest first).
-                // 2020 is larger than 2015. So 2020 comes first. Correct.
+                return dateB - dateA;
             });
 
             // Assign places
@@ -331,7 +339,8 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
             participants.forEach(p => {
                 if (p.status !== 'confirmed') return;
                 if (p.category && p.class) {
-                    const key = `${p.category} - ${p.class}`;
+                    // Avoid duplication: if category and class are the same, use only category
+                    const key = p.category === p.class ? p.category : `${p.category} - ${p.class}`;
                     if (!groups[key]) groups[key] = [];
                     groups[key].push(p);
                 }
@@ -349,8 +358,12 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
                     new TableRow({
                         children: [
                             new TableCell({ children: [new Paragraph('#')] }),
-                            new TableCell({ children: [new Paragraph('Учасник')] }),
-                            new TableCell({ children: [new Paragraph('Собака')] }),
+                            new TableCell({ children: [new Paragraph('Власник/Провідник')] }),
+                            new TableCell({ children: [new Paragraph('Кличка собаки')] }),
+                            new TableCell({ children: [new Paragraph('Дата народж.')] }),
+                            new TableCell({ children: [new Paragraph('Порода')] }),
+                            new TableCell({ children: [new Paragraph('Родовід')] }),
+                            new TableCell({ children: [new Paragraph('Чіп/Клеймо')] }),
                             new TableCell({ children: [new Paragraph('Пошук')] }),
                             new TableCell({ children: [new Paragraph('Послух')] }),
                             new TableCell({ children: [new Paragraph('Бали')] }),
@@ -360,6 +373,14 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
                 ];
                 groupParticipants.forEach(p => {
                     const place = p.results?.place ? String(p.results.place) : '-';
+                    const ownerHandler = p.handlerName && p.handlerName !== p.userName 
+                        ? `${p.userName} / ${p.handlerName}` 
+                        : p.userName;
+                    const dogName = p.dogName || '-';
+                    const dogBirth = p.dogBirth ? new Date(p.dogBirth).toLocaleDateString('uk-UA') : '-';
+                    const breed = p.dogBreed || '-';
+                    const pedigree = p.dogPedigree || '-';
+                    const chip = p.dogChip || '-';
                     const search = p.results?.search ? p.results.search.toFixed(1) : '-';
                     const obedience = p.results?.obedience ? p.results.obedience.toFixed(1) : '-';
                     const total = p.results?.total ? p.results.total.toFixed(1) : '-';
@@ -368,8 +389,12 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
                         new TableRow({
                             children: [
                                 new TableCell({ children: [new Paragraph(place)] }),
-                                new TableCell({ children: [new Paragraph(p.userName)] }),
-                                new TableCell({ children: [new Paragraph(p.dogName)] }),
+                                new TableCell({ children: [new Paragraph(ownerHandler)] }),
+                                new TableCell({ children: [new Paragraph(dogName)] }),
+                                new TableCell({ children: [new Paragraph(dogBirth)] }),
+                                new TableCell({ children: [new Paragraph(breed)] }),
+                                new TableCell({ children: [new Paragraph(pedigree)] }),
+                                new TableCell({ children: [new Paragraph(chip)] }),
                                 new TableCell({ children: [new Paragraph(search)] }),
                                 new TableCell({ children: [new Paragraph(obedience)] }),
                                 new TableCell({ children: [new Paragraph(total)] }),
@@ -401,11 +426,15 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
     };
 
     if (loading) {
-        return <div className="flex items-center justify-center min-h-screen text-slate-400">Завантаження...</div>;
+        return <div className="flex items-center justify-center min-h-screen bg-[#F5F5F7] text-gray-600">Завантаження...</div>;
     }
 
     if (!competition) {
-        return <div className="text-center text-white pt-20">Змагання не знайдено</div>;
+        return <div className="text-center bg-[#F5F5F7] text-gray-900 pt-20">Змагання не знайдено</div>;
+    }
+
+    if (accessDenied) {
+        return <div className="text-center bg-[#F5F5F7] text-gray-900 pt-20">Доступ заборонений</div>;
     }
 
     // Grouping for Render
@@ -416,417 +445,420 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
         if (p.status === 'registered' || p.status === 'rejected') return; // Don't show in results tables if pending or rejected
         
         if (p.category && p.class) {
-            const key = `${p.category} - ${p.class}`;
+            // Avoid duplication: if category and class are the same, use only category
+            const key = p.category === p.class ? p.category : `${p.category} - ${p.class}`;
             if (!groups[key]) groups[key] = [];
             groups[key].push(p);
         }
     });
 
     return (
-        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-[40px] pb-20">
-            {/* Header */}
-            <div className="flex flex-col gap-4 mb-6 sm:mb-8">
-                {/* Back Button */}
-                <Button 
-                    variant="ghost" 
-                    className="text-slate-400 hover:text-white hover:bg-[rgba(99,102,241,0.1)] pl-2 pr-4 text-[16px] py-2 h-auto rounded-lg transition-all duration-300 -ml-2 w-fit" 
-                    onClick={onBack}
-                >
-                    <ArrowLeft className="w-5 h-5 mr-2" /> Назад
-                </Button>
-                
-                {/* Title and Actions */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
-                    <div>
-                        <h1 className="text-2xl sm:text-3xl lg:text-[48px] text-[rgba(223,223,223,0.9999999999999999)] mb-1 text-[36px]">{competition.name}</h1>
-                        <p className="text-[rgb(144,161,185)] text-base sm:text-[18px]">Керування учасниками та результатами</p>
-                    </div>
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-                        <Button 
-                            variant="secondary" 
-                            className="bg-[rgba(255,255,255,0.05)] text-white border border-[rgba(99,102,241,0.3)] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)] backdrop-blur-[10px] w-full sm:w-auto"
-                            onClick={calculatePlaces}
-                        >
-                            <Calculator className="w-4 h-4 mr-2" /> Розрахувати місця
-                        </Button>
-                        <Button 
-                            variant="secondary" 
-                            className="bg-[rgba(255,255,255,0.05)] text-white border border-[rgba(99,102,241,0.3)] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)] backdrop-blur-[10px] w-full sm:w-auto"
-                            onClick={downloadProtocolDOCX}
-                        >
-                            <Download className="w-4 h-4 mr-2" /> Завантажити протокол
-                        </Button>
-                        <Button 
-                            className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)] w-full sm:w-auto"
-                            onClick={saveAll}
-                            disabled={saving}
-                        >
-                            <Save className="w-4 h-4 mr-2" /> {saving ? 'Збереження...' : 'Зберегти зміни'}
-                        </Button>
+        <div className="min-h-screen bg-[#F5F5F7]">
+            <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-[60px] pb-20">
+                {/* Header */}
+                <div className="flex flex-col gap-4 mb-8 sm:mb-12">
+                    {/* Back Button */}
+                    <Button 
+                        variant="ghost" 
+                        className="text-gray-600 hover:text-gray-900 hover:bg-gray-100 pl-2 pr-4 py-2 h-auto rounded-xl transition-all duration-300 -ml-2 w-fit text-base" 
+                        onClick={onBack}
+                    >
+                        <ArrowLeft className="w-5 h-5 mr-2" /> Назад
+                    </Button>
+                    
+                    {/* Title and Actions */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
+                        <div>
+                            <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold text-[36px]">{competition.name}</h1>
+                            <p className="text-base sm:text-lg text-gray-600">Керування учасниками та результатами</p>
+                        </div>
+                        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                            <Button 
+                                variant="secondary" 
+                                className="bg-white text-gray-700 hover:bg-gray-50 w-full sm:w-auto shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-none text-base"
+                                onClick={calculatePlaces}
+                            >
+                                <Award className="w-4 h-4 mr-2" /> Розрахувати місця
+                            </Button>
+                            <Button 
+                                variant="secondary" 
+                                className="bg-white text-gray-700 hover:bg-gray-50 w-full sm:w-auto shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-none text-base"
+                                onClick={downloadProtocolDOCX}
+                            >
+                                <Download className="w-4 h-4 mr-2" /> Завантажити протокол
+                            </Button>
+                            <Button 
+                                className="bg-[#007AFF] text-white hover:bg-[#0066CC] w-full sm:w-auto shadow-[0_4px_12px_rgba(0,122,255,0.3)] text-base"
+                                onClick={saveAll}
+                                disabled={saving}
+                            >
+                                <Save className="w-4 h-4 mr-2" /> {saving ? 'Збереження...' : 'Зберегти зміни'}
+                            </Button>
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Pending Applications */}
-            {pendingParticipants.length > 0 && (
-                <Card className="mb-8 border-[rgba(99,102,241,0.2)] bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px]">
-                    <CardHeader>
-                        <CardTitle className="text-indigo-300 flex items-center gap-2 text-lg sm:text-xl">
-                            <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6" /> Нові заявки на участь ({pendingParticipants.length})
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        {/* Mobile: Cards */}
-                        <div className="md:hidden space-y-4">
-                            {pendingParticipants.map((p, idx) => (
-                                <div key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="bg-[rgba(15,23,42,0.5)] border border-indigo-500/20 rounded-xl p-4 space-y-3">
-                                    <div>
-                                        <div className="text-slate-400 text-sm mb-1">Учасник</div>
-                                        <div className="text-slate-300 font-medium text-base">{p.userName}</div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div className="text-slate-400 text-sm mb-1">Собака</div>
-                                        <div className="text-slate-400 text-base">{p.dogName}</div>
-                                        <div className="text-sm text-slate-500">{p.dogBreed}</div>
-                                    </div>
-                                    
-                                    <div>
-                                        <div className="text-slate-400 text-sm mb-1">Категорія</div>
-                                        <Badge variant="outline" className="border-indigo-500/40 text-indigo-300 text-sm py-1">
-                                            {p.category || 'Не вказано'}
-                                        </Badge>
-                                    </div>
-                                    
-                                    <div>
-                                        <div className="text-slate-400 text-sm mb-1">Документи</div>
-                                        <div className="flex flex-col gap-1">
-                                            {(p as any).documents && (p as any).documents.length > 0 ? (
-                                                (p as any).documents.map((doc: string, idx: number) => (
-                                                    <DocumentLink key={idx} path={doc} />
-                                                ))
-                                            ) : (
-                                                <span className="text-slate-600 text-sm">Немає документів</span>
-                                            )}
+                {/* Pending Applications */}
+                {pendingParticipants.length > 0 && (
+                    <Card className="mb-8 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-none">
+                        <CardHeader>
+                            <CardTitle className="text-gray-900 flex items-center gap-2 text-lg sm:text-xl">
+                                <AlertCircle className="w-5 h-5 sm:w-6 sm:h-6 text-[#007AFF]" /> Нові заявки на участь ({pendingParticipants.length})
+                            </CardTitle>
+                        </CardHeader>
+                        <CardContent>
+                            {/* Mobile: Cards */}
+                            <div className="md:hidden space-y-4">
+                                {pendingParticipants.map((p, idx) => (
+                                    <div key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                        <div>
+                                            <div className="text-gray-500 text-sm mb-1">Учасник</div>
+                                            <div className="text-gray-900 font-medium text-base">{p.userName}</div>
+                                        </div>
+                                        
+                                        <div>
+                                            <div className="text-gray-500 text-sm mb-1">Собака</div>
+                                            <div className="text-gray-700 text-base">{p.dogName}</div>
+                                            <div className="text-sm text-gray-500">{p.dogBreed}</div>
+                                        </div>
+                                        
+                                        <div>
+                                            <div className="text-gray-500 text-sm mb-1">Категорія</div>
+                                            <Badge variant="outline" className="border-[#007AFF]/40 text-[#007AFF] text-sm py-1">
+                                                {p.category || 'Не вказано'}
+                                            </Badge>
+                                        </div>
+                                        
+                                        <div>
+                                            <div className="text-gray-500 text-sm mb-1">Документи</div>
+                                            <div className="flex flex-col gap-1">
+                                                {(p as any).documents && (p as any).documents.length > 0 ? (
+                                                    (p as any).documents.map((doc: string, idx: number) => (
+                                                        <DocumentLink key={idx} path={doc} />
+                                                    ))
+                                                ) : (
+                                                    <span className="text-gray-400 text-sm">Немає документів</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        <div className="flex gap-2 pt-2">
+                                            <Button 
+                                                size="sm" 
+                                                className="flex-1 bg-green-50 text-green-600 hover:bg-green-100 border border-green-200"
+                                                onClick={() => handleStatusChange(p.userId, p.dogId, 'confirmed', undefined, p.category, p.id)}
+                                            >
+                                                <CheckCircle className="w-4 h-4 mr-1" /> Прийняти
+                                            </Button>
+                                            <Button 
+                                                size="sm" 
+                                                className="flex-1 bg-red-50 text-red-600 hover:bg-red-100 border border-red-200"
+                                                onClick={() => setRejectDialog({open: true, userId: p.userId, dogId: p.dogId, category: p.category, participantId: p.id})}
+                                            >
+                                                <XCircle className="w-4 h-4 mr-1" /> Відхилити
+                                            </Button>
                                         </div>
                                     </div>
-                                    
-                                    <div className="flex gap-2 pt-2">
-                                        <Button 
-                                            size="sm" 
-                                            className="flex-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50"
-                                            onClick={() => handleStatusChange(p.userId, p.dogId, 'confirmed', undefined, p.category, p.id)}
-                                        >
-                                            <Check className="w-4 h-4 mr-1" /> Прийняти
-                                        </Button>
-                                        <Button 
-                                            size="sm" 
-                                            className="flex-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50"
-                                            onClick={() => setRejectDialog({open: true, userId: p.userId, dogId: p.dogId, category: p.category, participantId: p.id})}
-                                        >
-                                            <X className="w-4 h-4 mr-1" /> Відхилити
-                                        </Button>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-
-                        {/* Desktop: Table */}
-                        <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
-                            <div className="min-w-[800px] px-4 sm:px-0">
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="border-indigo-500/20 hover:bg-transparent">
-                                            <TableHead className="text-indigo-200/70 text-base">Учасник</TableHead>
-                                            <TableHead className="text-indigo-200/70 text-base">Собака</TableHead>
-                                            <TableHead className="text-indigo-200/70 text-base">Категорія</TableHead>
-                                            <TableHead className="text-indigo-200/70 text-base">Документи</TableHead>
-                                            <TableHead className="text-indigo-200/70 text-right text-base">Дії</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {pendingParticipants.map((p, idx) => (
-                                            <TableRow key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="border-indigo-500/10 hover:bg-indigo-500/10">
-                                                <TableCell className="text-slate-300 font-medium text-base">
-                                                    {p.userName}
-                                                </TableCell>
-                                                <TableCell className="text-slate-400 text-base">
-                                                    {p.dogName}
-                                                    <div className="text-sm text-slate-500">{p.dogBreed}</div>
-                                                </TableCell>
-                                                <TableCell className="text-slate-300 text-base">
-                                                    <Badge variant="outline" className="border-indigo-500/40 text-indigo-300 text-sm py-1">
-                                                        {p.category || 'Не вказано'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        {(p as any).documents && (p as any).documents.length > 0 ? (
-                                                            (p as any).documents.map((doc: string, idx: number) => (
-                                                                <DocumentLink key={idx} path={doc} />
-                                                            ))
-                                                        ) : (
-                                                            <span className="text-slate-600 text-sm">Немає документів</span>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-2">
-                                                        <Button 
-                                                            size="sm" 
-                                                            className="bg-green-500/20 text-green-400 hover:bg-green-500/30 border border-green-500/50 px-3"
-                                                            onClick={() => handleStatusChange(p.userId, p.dogId, 'confirmed', undefined, p.category, p.id)}
-                                                        >
-                                                            <Check className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Прийняти</span>
-                                                        </Button>
-                                                        <Button 
-                                                            size="sm" 
-                                                            className="bg-red-500/20 text-red-400 hover:bg-red-500/30 border border-red-500/50 px-3"
-                                                            onClick={() => setRejectDialog({open: true, userId: p.userId, dogId: p.dogId, category: p.category, participantId: p.id})}
-                                                        >
-                                                            <X className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Відхилити</span>
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
+                                ))}
                             </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
 
-            <Dialog open={rejectDialog.open} onOpenChange={(open) => !open && setRejectDialog({open: false, userId: '', dogId: ''})}>
-                <DialogContent className="bg-[rgba(30,41,59,0.95)] backdrop-blur-[20px] text-white border-[rgba(99,102,241,0.2)]">
-                    <DialogHeader>
-                        <DialogTitle className="text-xl">Вкажіть причину відмови</DialogTitle>
-                        <DialogDescription className="text-slate-400 text-base">
-                            Ця інформація буде доступна учаснику в особистому кабінеті.
-                        </DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Label className="mb-2 block text-slate-300 text-base">Причина</Label>
-                        <Textarea 
-                            value={rejectReason}
-                            onChange={(e) => setRejectReason(e.target.value)}
-                            placeholder="Наприклад: Невідповідність віку собаки класу змагань..."
-                            className="bg-[rgba(15,23,42,0.5)] border-[rgba(99,102,241,0.3)] text-white min-h-[100px] text-base focus:border-indigo-500"
-                        />
-                    </div>
-                    <DialogFooter>
-                        <Button variant="outline" onClick={() => setRejectDialog({open: false, userId: '', dogId: ''})} className="border-[rgba(99,102,241,0.3)] text-slate-300 hover:bg-[rgba(99,102,241,0.1)] hover:text-white bg-transparent">Скасувати</Button>
-                        <Button variant="destructive" onClick={confirmReject} className="bg-red-500/80 hover:bg-red-600 text-white border border-red-500/50">Відхилити заявку</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-
-            {/* Grouped Tables */}
-            <div className="flex overflow-x-auto gap-2 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-2">
-                {Object.keys(groups).map(groupName => (
-                     <button
-                        key={groupName}
-                        onClick={() => setActiveTab(groupName)}
-                        className={`px-6 py-3 border rounded-[10px] cursor-pointer transition-all duration-300 whitespace-nowrap flex-shrink-0 ${
-                            (activeTab || Object.keys(groups)[0]) === groupName
-                                ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-transparent'
-                                : 'bg-[rgba(30,41,59,0.5)] border-[rgba(99,102,241,0.2)] text-slate-400 hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.4)]'
-                        }`}
-                    >
-                        {groupName}
-                    </button>
-                ))}
-            </div>
-
-            {Object.keys(groups).length > 0 ? (
-                (() => {
-                    const currentTab = activeTab || Object.keys(groups)[0];
-                    const groupParticipants = groups[currentTab] || [];
-                    
-                    return (
-                        <Card key={currentTab} className="mb-8 bg-[rgba(30,41,59,0.5)] border-[rgba(99,102,241,0.2)] backdrop-blur-[20px]">
-                            <CardContent className="pt-6">
-                                {/* Mobile: Cards */}
-                                <div className="md:hidden space-y-4">
-                                    {groupParticipants.map((p, idx) => (
-                                        <div key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="bg-[rgba(15,23,42,0.5)] border border-indigo-500/20 rounded-xl p-4 space-y-3">
-                                            {/* Place Badge */}
-                                            {p.results?.place && (
-                                                <div className="flex justify-center mb-2">
-                                                    <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-bold ${
-                                                        p.results.place === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                        p.results.place === 2 ? 'bg-slate-300/20 text-slate-300' :
-                                                        p.results.place === 3 ? 'bg-orange-700/20 text-orange-400' :
-                                                        'bg-slate-700/20 text-slate-500'
-                                                    }`}>
-                                                        {p.results.place}
-                                                    </div>
-                                                </div>
-                                            )}
-                                            
-                                            <div>
-                                                <div className="text-slate-400 text-sm mb-1">Учасник</div>
-                                                <div className="font-medium text-slate-200 text-base">{p.userName}</div>
-                                            </div>
-                                            
-                                            <div>
-                                                <div className="text-slate-400 text-sm mb-1">Собака</div>
-                                                <div className="text-slate-300 text-base">{p.dogName}</div>
-                                                <div className="text-sm text-slate-500">{p.dogBreed}</div>
-                                                {p.dogBirth && <div className="text-sm text-slate-600">{new Date(p.dogBirth).getFullYear()}</div>}
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-2 gap-3">
-                                                <div>
-                                                    <label className="text-slate-400 text-sm mb-1 block">Пошук</label>
-                                                    <Input 
-                                                        type="number" 
-                                                        className="bg-[rgba(15,23,42,0.5)] border-indigo-500/30 text-center text-white h-10 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                                        value={p.results?.search ?? ''}
-                                                        onChange={(e) => handleResultChange(p.userId, p.dogId, 'search', e.target.value, p.category, p.id)}
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="text-slate-400 text-sm mb-1 block">Послух</label>
-                                                    <Input 
-                                                        type="number" 
-                                                        className="bg-[rgba(15,23,42,0.5)] border-indigo-500/30 text-center text-white h-10 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-                                                        value={p.results?.obedience ?? ''}
-                                                        onChange={(e) => handleResultChange(p.userId, p.dogId, 'obedience', e.target.value, p.category, p.id)}
-                                                    />
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="pt-2 border-t border-indigo-500/20">
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-slate-400 text-base">Загальний бал:</span>
-                                                    <span className="font-bold text-indigo-300 text-xl">{p.results?.total ?? '-'}</span>
-                                                </div>
-                                                
-                                                <div className="flex justify-between items-center mb-2">
-                                                    <span className="text-slate-400 text-base">Оцінка:</span>
-                                                    <Badge variant="outline" className={`text-sm py-1 font-normal
-                                                        ${p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                          p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                          p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                          p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                          p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-400' :
-                                                          'border-slate-700 text-slate-500'}
-                                                    `}>
-                                                        {p.results?.qualification || '—'}
-                                                    </Badge>
-                                                </div>
-                                                
-                                                <div className="flex justify-between items-center">
-                                                    <span className="text-slate-400 text-base">Статус:</span>
-                                                    <span className={`inline-block px-2 py-1 rounded text-sm ${
-                                                        p.status === 'confirmed' ? 'text-green-400 bg-green-500/10' : 'text-slate-400'
-                                                    }`}>
-                                                        {p.status === 'confirmed' ? 'ОК' : '...'}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {/* Desktop: Table */}
-                                <div className="hidden md:block">
-                                    <table className="w-full border-collapse">
-                                        <thead>
-                                            <tr className="bg-[rgba(99,102,241,0.15)]">
-                                                <th className="p-4 text-left text-white">#</th>
-                                                <th className="p-4 text-left text-white">Учасник</th>
-                                                <th className="p-4 text-left text-white">Собака</th>
-                                                <th className="p-4 text-left text-white">Пошук</th>
-                                                <th className="p-4 text-left text-white">Послух</th>
-                                                <th className="p-4 text-left text-white">Заг. бал</th>
-                                                <th className="p-4 text-left text-white">Оцінка</th>
-                                                <th className="p-4 text-left text-white">Статус</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {groupParticipants.map((p, idx) => (
-                                                <tr key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="border-t border-[rgba(99,102,241,0.1)] hover:bg-[rgba(99,102,241,0.05)]">
-                                                    <td className="p-4 text-slate-400">
-                                                        {p.results?.place ? (
-                                                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                                                p.results.place === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                p.results.place === 2 ? 'bg-slate-300/20 text-slate-300' :
-                                                                p.results.place === 3 ? 'bg-orange-700/20 text-orange-400' :
-                                                                'text-slate-500'
-                                                            }`}>
-                                                                {p.results.place}
-                                                            </div>
-                                                        ) : '-'}
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
+                            {/* Desktop: Table */}
+                            <div className="hidden md:block overflow-x-auto -mx-4 sm:mx-0">
+                                <div className="min-w-[800px] px-4 sm:px-0">
+                                    <Table>
+                                        <TableHeader>
+                                            <TableRow className="border-gray-200 hover:bg-transparent">
+                                                <TableHead className="text-gray-600 text-base">Учасник</TableHead>
+                                                <TableHead className="text-gray-600 text-base">Собака</TableHead>
+                                                <TableHead className="text-gray-600 text-base">Категорія</TableHead>
+                                                <TableHead className="text-gray-600 text-base">Документи</TableHead>
+                                                <TableHead className="text-gray-600 text-right text-base">Дії</TableHead>
+                                            </TableRow>
+                                        </TableHeader>
+                                        <TableBody>
+                                            {pendingParticipants.map((p, idx) => (
+                                                <TableRow key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="border-gray-200 hover:bg-gray-50">
+                                                    <TableCell className="text-gray-900 font-medium text-base">
                                                         {p.userName}
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
-                                                        <div>{p.dogName}</div>
-                                                        <div className="text-sm text-slate-500">{p.dogBreed}</div>
-                                                        {p.dogBirth && <div className="text-sm text-slate-600">{new Date(p.dogBirth).getFullYear()}</div>}
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
+                                                    </TableCell>
+                                                    <TableCell className="text-gray-700 text-base">
+                                                        {p.dogName}
+                                                        <div className="text-sm text-gray-500">{p.dogBreed}</div>
+                                                    </TableCell>
+                                                    <TableCell className="text-gray-900 text-base">
+                                                        <Badge variant="outline" className="border-[#007AFF]/40 text-[#007AFF] text-sm py-1">
+                                                            {p.category || 'Не вказано'}
+                                                        </Badge>
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <div className="flex flex-col gap-1">
+                                                            {(p as any).documents && (p as any).documents.length > 0 ? (
+                                                                (p as any).documents.map((doc: string, idx: number) => (
+                                                                    <DocumentLink key={idx} path={doc} />
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-gray-400 text-sm">Немає документів</span>
+                                                            )}
+                                                        </div>
+                                                    </TableCell>
+                                                    <TableCell className="text-right">
+                                                        <div className="flex justify-end gap-2">
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="bg-green-50 text-green-600 hover:bg-green-100 border border-green-200 px-3"
+                                                                onClick={() => handleStatusChange(p.userId, p.dogId, 'confirmed', undefined, p.category, p.id)}
+                                                            >
+                                                                <CheckCircle className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Прийняти</span>
+                                                            </Button>
+                                                            <Button 
+                                                                size="sm" 
+                                                                className="bg-red-50 text-red-600 hover:bg-red-100 border border-red-200 px-3"
+                                                                onClick={() => setRejectDialog({open: true, userId: p.userId, dogId: p.dogId, category: p.category, participantId: p.id})}
+                                                            >
+                                                                <XCircle className="w-4 h-4 sm:mr-1" /> <span className="hidden sm:inline">Відхилити</span>
+                                                            </Button>
+                                                        </div>
+                                                    </TableCell>
+                                                </TableRow>
+                                            ))}
+                                        </TableBody>
+                                    </Table>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                <Dialog open={rejectDialog.open} onOpenChange={(open) => !open && setRejectDialog({open: false, userId: '', dogId: ''})}>
+                    <DialogContent className="bg-white text-gray-900 border-gray-200">
+                        <DialogHeader>
+                            <DialogTitle className="text-xl">Вкажіть причину відмови</DialogTitle>
+                            <DialogDescription className="text-gray-600 text-base">
+                                Ця інформація буде доступна учаснику в особистому кабінеті.
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="py-4">
+                            <Label className="mb-2 block text-gray-700 text-base">Причина</Label>
+                            <Textarea 
+                                value={rejectReason}
+                                onChange={(e) => setRejectReason(e.target.value)}
+                                placeholder="Наприклад: Невідповідність віку собаки класу змагань..."
+                                className="bg-white border-gray-300 text-gray-900 min-h-[100px] text-base focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]"
+                            />
+                        </div>
+                        <DialogFooter>
+                            <Button variant="outline" onClick={() => setRejectDialog({open: false, userId: '', dogId: ''})} className="border-gray-300 text-gray-700 hover:bg-gray-100 hover:text-gray-900 bg-white">Скасувати</Button>
+                            <Button variant="destructive" onClick={confirmReject} className="bg-red-600 hover:bg-red-700 text-white border-none">Відхилити заявку</Button>
+                        </DialogFooter>
+                    </DialogContent>
+                </Dialog>
+
+                {/* Grouped Tables */}
+                <div className="flex overflow-x-auto gap-2 mb-6 -mx-4 px-4 sm:mx-0 sm:px-0 sm:flex-wrap pb-2">
+                    {Object.keys(groups).map(groupName => (
+                         <button
+                            key={groupName}
+                            onClick={() => setActiveTab(groupName)}
+                            className={`px-6 py-3 rounded-xl cursor-pointer transition-all duration-300 whitespace-nowrap flex-shrink-0 text-base ${
+                                (activeTab || Object.keys(groups)[0]) === groupName
+                                    ? 'bg-[#007AFF] text-white shadow-[0_4px_12px_rgba(0,122,255,0.3)]'
+                                    : 'bg-white text-gray-700 shadow-[0_2px_8px_rgba(0,0,0,0.08)] hover:shadow-[0_4px_12px_rgba(0,0,0,0.12)]'
+                            }`}
+                        >
+                            {groupName}
+                        </button>
+                    ))}
+                </div>
+
+                {Object.keys(groups).length > 0 ? (
+                    (() => {
+                        const currentTab = activeTab || Object.keys(groups)[0];
+                        const groupParticipants = groups[currentTab] || [];
+                        
+                        return (
+                            <Card key={currentTab} className="mb-8 bg-white shadow-[0_4px_20px_rgba(0,0,0,0.08)] border-none">
+                                <CardContent className="pt-6">
+                                    {/* Mobile: Cards */}
+                                    <div className="md:hidden space-y-4">
+                                        {groupParticipants.map((p, idx) => (
+                                            <div key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="bg-gray-50 rounded-xl p-4 space-y-3">
+                                                {/* Place Badge */}
+                                                {p.results?.place && (
+                                                    <div className="flex justify-center mb-2">
+                                                        <div className={`w-12 h-12 rounded-full flex items-center justify-center text-xl font-semibold ${
+                                                            p.results.place === 1 ? 'bg-yellow-100 text-yellow-700' :
+                                                            p.results.place === 2 ? 'bg-gray-200 text-gray-700' :
+                                                            p.results.place === 3 ? 'bg-orange-100 text-orange-700' :
+                                                            'bg-gray-100 text-gray-600'
+                                                        }`}>
+                                                            {p.results.place}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                
+                                                <div>
+                                                    <div className="text-gray-500 text-sm mb-1">Учасник</div>
+                                                    <div className="font-medium text-gray-900 text-base">{p.userName}</div>
+                                                </div>
+                                                
+                                                <div>
+                                                    <div className="text-gray-500 text-sm mb-1">Собака</div>
+                                                    <div className="text-gray-900 text-base">{p.dogName}</div>
+                                                    <div className="text-sm text-gray-500">{p.dogBreed}</div>
+                                                    {p.dogBirth && <div className="text-sm text-gray-400">{new Date(p.dogBirth).getFullYear()}</div>}
+                                                </div>
+                                                
+                                                <div className="grid grid-cols-2 gap-3">
+                                                    <div>
+                                                        <label className="text-gray-500 text-sm mb-1 block">Пошук</label>
                                                         <Input 
                                                             type="number" 
-                                                            className="bg-[rgba(15,23,42,0.5)] border-indigo-500/30 text-center text-white h-10 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-24"
+                                                            className="bg-white border-gray-300 text-center text-gray-900 h-10 text-base focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]"
                                                             value={p.results?.search ?? ''}
                                                             onChange={(e) => handleResultChange(p.userId, p.dogId, 'search', e.target.value, p.category, p.id)}
                                                         />
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
+                                                    </div>
+                                                    <div>
+                                                        <label className="text-gray-500 text-sm mb-1 block">Послух</label>
                                                         <Input 
                                                             type="number" 
-                                                            className="bg-[rgba(15,23,42,0.5)] border-indigo-500/30 text-center text-white h-10 text-base focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 w-24"
+                                                            className="bg-white border-gray-300 text-center text-gray-900 h-10 text-base focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF]"
                                                             value={p.results?.obedience ?? ''}
                                                             onChange={(e) => handleResultChange(p.userId, p.dogId, 'obedience', e.target.value, p.category, p.id)}
                                                         />
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
-                                                        {p.results?.total ?? '-'}
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
+                                                    </div>
+                                                </div>
+                                                
+                                                <div className="pt-2 border-t border-gray-200">
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-gray-600 text-base">Загальний бал:</span>
+                                                        <span className="font-semibold text-[#007AFF] text-xl">{p.results?.total ?? '-'}</span>
+                                                    </div>
+                                                    
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <span className="text-gray-600 text-base">Оцінка:</span>
                                                         <Badge variant="outline" className={`text-sm py-1 font-normal
-                                                            ${p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                              p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                              p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                              p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                              p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-400' :
-                                                              'border-slate-700 text-slate-500'}
+                                                            ${p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-600' :
+                                                              p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-600' :
+                                                              p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-600' :
+                                                              p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-600' :
+                                                              p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-600' :
+                                                              'border-gray-400 text-gray-500'}
                                                         `}>
                                                             {p.results?.qualification || '—'}
                                                         </Badge>
-                                                    </td>
-                                                    <td className="p-4 text-slate-400">
+                                                    </div>
+                                                    
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-gray-600 text-base">Статус:</span>
                                                         <span className={`inline-block px-2 py-1 rounded text-sm ${
-                                                            p.status === 'confirmed' ? 'text-green-400 bg-green-500/10' : 'text-slate-400'
+                                                            p.status === 'confirmed' ? 'text-green-600 bg-green-50' : 'text-gray-500'
                                                         }`}>
                                                             {p.status === 'confirmed' ? 'ОК' : '...'}
                                                         </span>
-                                                    </td>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+
+                                    {/* Desktop: Table */}
+                                    <div className="hidden md:block overflow-x-auto">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-gray-50">
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">#</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Учасник</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Собака</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Пошук</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Послух</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Заг. бал</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Оцінка</th>
+                                                    <th className="p-4 text-left text-gray-900 text-base font-semibold">Статус</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    );
-                })()
-            ) : (
-                <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-10 sm:p-16 md:p-[100px_40px] text-center">
-                    <Users className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-                    <p className="text-lg text-slate-500">
-                        {pendingParticipants.length > 0 
-                            ? 'Прийміть заявки учасників, щоб почати вводити результати'
-                            : 'Немає підтверджених учасників'
-                        }
-                    </p>
-                </div>
-            )}
+                                            </thead>
+                                            <tbody>
+                                                {groupParticipants.map((p, idx) => (
+                                                    <tr key={p.id || `${p.userId}-${p.dogId}-${idx}`} className="border-t border-gray-200 hover:bg-gray-50">
+                                                        <td className="p-4 text-gray-700">
+                                                            {p.results?.place ? (
+                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center font-semibold ${
+                                                                    p.results.place === 1 ? 'bg-yellow-100 text-yellow-700' :
+                                                                    p.results.place === 2 ? 'bg-gray-200 text-gray-700' :
+                                                                    p.results.place === 3 ? 'bg-orange-100 text-orange-700' :
+                                                                    'text-gray-600'
+                                                                }`}>
+                                                                    {p.results.place}
+                                                                </div>
+                                                            ) : '-'}
+                                                        </td>
+                                                        <td className="p-4 text-gray-700 text-base">
+                                                            {p.userName}
+                                                        </td>
+                                                        <td className="p-4 text-gray-700 text-base">
+                                                            <div>{p.dogName}</div>
+                                                            <div className="text-sm text-gray-500">{p.dogBreed}</div>
+                                                            {p.dogBirth && <div className="text-sm text-gray-400">{new Date(p.dogBirth).getFullYear()}</div>}
+                                                        </td>
+                                                        <td className="p-4 text-gray-700">
+                                                            <Input 
+                                                                type="number" 
+                                                                className="bg-white border-gray-300 text-center text-gray-900 h-10 text-base focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF] w-24"
+                                                                value={p.results?.search ?? ''}
+                                                                onChange={(e) => handleResultChange(p.userId, p.dogId, 'search', e.target.value, p.category, p.id)}
+                                                            />
+                                                        </td>
+                                                        <td className="p-4 text-gray-700">
+                                                            <Input 
+                                                                type="number" 
+                                                                className="bg-white border-gray-300 text-center text-gray-900 h-10 text-base focus:border-[#007AFF] focus:ring-1 focus:ring-[#007AFF] w-24"
+                                                                value={p.results?.obedience ?? ''}
+                                                                onChange={(e) => handleResultChange(p.userId, p.dogId, 'obedience', e.target.value, p.category, p.id)}
+                                                            />
+                                                        </td>
+                                                        <td className="p-4 text-gray-900 text-base font-semibold">
+                                                            {p.results?.total ?? '-'}
+                                                        </td>
+                                                        <td className="p-4 text-gray-700">
+                                                            <Badge variant="outline" className={`text-sm py-1 font-normal
+                                                                ${p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-600' :
+                                                                  p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-600' :
+                                                                  p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-600' :
+                                                                  p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-600' :
+                                                                  p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-600' :
+                                                                  'border-gray-400 text-gray-500'}
+                                                            `}>
+                                                                {p.results?.qualification || '—'}
+                                                            </Badge>
+                                                        </td>
+                                                        <td className="p-4 text-gray-700">
+                                                            <span className={`inline-block px-2 py-1 rounded text-sm ${
+                                                                p.status === 'confirmed' ? 'text-green-600 bg-green-50' : 'text-gray-500'
+                                                            }`}>
+                                                                {p.status === 'confirmed' ? 'ОК' : '...'}
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        );
+                    })()
+                ) : (
+                    <div className="bg-white shadow-sm rounded-[20px] p-10 sm:p-16 md:p-[100px_40px] text-center">
+                        <Users className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+                        <p className="text-lg text-gray-500">
+                            {pendingParticipants.length > 0 
+                                ? 'Прийміть заявки учасників, щоб почати вводити результати'
+                                : 'Немає підтверджених учасників'
+                            }
+                        </p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }

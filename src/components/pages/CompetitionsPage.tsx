@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Trophy, Plus, Calendar, MapPin, Users, Edit, Trash2, Settings, AlertTriangle, Upload, X } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { Competition, UserProfile, Dog } from '../../types';
-import { projectId, publicAnonKey } from '../../utils/supabase/info';
+import { supabaseUrl, publicAnonKey } from '../../utils/supabase/info';
 import { supabase } from '../../utils/supabase/client';
 import CompetitionModal from '../CompetitionModal';
 import {
@@ -24,6 +24,17 @@ type CompetitionsPageProps = {
   showToast: (msg: string, type: any) => void;
 };
 
+// Helper function to get status label and color
+const getStatusConfig = (status: string) => {
+  const configs: Record<string, { label: string; color: string }> = {
+    'planned': { label: 'Реєстрація скоро відкриється', color: 'bg-gray-100 text-gray-700' },
+    'registration_open': { label: 'Йде реєстрація', color: 'bg-green-100 text-green-700' },
+    'registration_closed': { label: 'Реєстрація завершена', color: 'bg-yellow-100 text-yellow-700' },
+    'completed': { label: 'Завершені', color: 'bg-purple-100 text-purple-700' },
+  };
+  return configs[status] || { label: status, color: 'bg-gray-100 text-gray-700' };
+};
+
 export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, onPageChange }: CompetitionsPageProps & { onPageChange: (page: any, param?: string) => void }) {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -33,6 +44,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
   const [userDogs, setUserDogs] = useState<Dog[]>([]);
   const [selectedDogId, setSelectedDogId] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('');
+  const [handlerName, setHandlerName] = useState('');
   const [registerFiles, setRegisterFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -83,10 +95,20 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
           setCompetitions(competitions.filter(c => c.id !== compToDelete));
           showToast('Змагання видалено', 'success');
       } catch (e) {
-          showToast('Помилка видалення', 'error');
+          showToast('Помиа видалення', 'error');
       } finally {
           setDeleteConfirmOpen(false);
           setCompToDelete(null);
+      }
+  };
+
+  const handleStatusChange = async (compId: string, newStatus: string) => {
+      try {
+          await apiRequest(`/competitions/${compId}`, 'PUT', { status: newStatus });
+          setCompetitions(competitions.map(c => c.id === compId ? { ...c, status: newStatus } : c));
+          showToast('Статус оновлено', 'success');
+      } catch (e) {
+          showToast('Помилка зміни статусу', 'error');
       }
   };
 
@@ -107,6 +129,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
               setRegisterModalOpen(true);
               setSelectedDogId(dogs[0].id);
               setSelectedCategory('');
+              setHandlerName('');
               setRegisterFiles([]);
           }
       } catch (e) {
@@ -132,7 +155,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                   const formData = new FormData();
                   formData.append('file', file);
                   
-                  const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-5f926218/upload`, {
+                  const response = await fetch(`${supabaseUrl}/functions/v1/make-server-5f926218/upload`, {
                       method: 'POST',
                       headers: {
                           'Authorization': `Bearer ${token || publicAnonKey}`
@@ -152,6 +175,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
           await apiRequest(`/competitions/${selectedCompId}/register`, 'POST', { 
               dogId: selectedDogId,
               category: selectedCategory,
+              handlerName: handlerName.trim() || undefined,
               documents: uploadedDocs
           });
           
@@ -188,10 +212,10 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
     <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-8 sm:py-12 md:py-[60px]">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 sm:mb-12 gap-4">
         <div>
-            <h1 className="text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
             Змагання
             </h1>
-            <p className="text-lg text-slate-400">Майбутні змагання з пошуково-рятувальної кінології</p>
+            <p className="text-base sm:text-lg text-gray-600">Майбутні змагання з пошуково-рятувальної кінології</p>
         </div>
         {isOrganizer && (
             <button 
@@ -199,7 +223,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                     setSelectedCompForEdit(undefined);
                     setIsModalOpen(true);
                 }}
-                className="w-full sm:w-auto px-6 py-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:translate-y-[-3px] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)]"
+                className="w-full sm:w-auto px-6 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center gap-2"
             >
                 <Plus size={20} /> Створити змагання
             </button>
@@ -207,74 +231,95 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
       </div>
 
       {competitions.length === 0 ? (
-        <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-10 sm:p-16 md:p-[100px_40px] text-center">
-            <Trophy className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-            <p className="text-lg text-slate-500">Немає запланованих змагань</p>
+        <div className="bg-white shadow-sm rounded-[20px] p-10 sm:p-16 md:p-[100px_40px] text-center">
+            <Trophy className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+            <p className="text-lg text-gray-500">Немає запланованих змагань</p>
         </div>
       ) : (
         <div className="grid gap-6">
             {competitions.map(comp => (
-                <div key={comp.id} className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-4 sm:p-6 transition-all duration-300 hover:border-[rgba(99,102,241,0.5)] hover:shadow-[0_8px_30px_rgba(99,102,241,0.2)] flex flex-col md:flex-row gap-6">
-                    <div className="flex-1">
+                <div key={comp.id} className="bg-white shadow-sm rounded-2xl p-4 sm:p-6 transition-all duration-300 hover:shadow-lg flex flex-col md:flex-row gap-6 overflow-hidden">
+                    <div className="flex-1 min-w-0">
                         <div className="flex flex-col sm:flex-row justify-between items-start gap-3 mb-2">
-                             <h3 className="text-2xl text-white font-bold font-normal">{comp.name}</h3>
-                             {comp.organizerName && <Badge variant="outline" className="text-slate-400 border-slate-700 text-[16px]">{comp.organizerName}</Badge>}
+                             <h3 className="text-xl md:text-2xl text-gray-900 font-semibold break-words">{comp.name}</h3>
+                             {comp.organizerName && <Badge variant="outline" className="text-gray-600 border-gray-300 text-[16px] shrink-0">{comp.organizerName}</Badge>}
                         </div>
                         
-                        <div className="flex flex-wrap gap-4 text-slate-300 text-base mb-4">
-                            <span className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                                <Calendar size={18} className="text-indigo-400" /> 
-                                {formatDate(comp.startDate || comp.date, comp.endDate)}
+                        <div className="flex flex-wrap gap-4 text-gray-700 text-base mb-4">
+                            <span className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 text-sm sm:text-base">
+                                <Calendar size={18} className="text-[#007AFF] shrink-0" /> 
+                                <span className="truncate text-[16px]">{formatDate(comp.startDate || comp.date, comp.endDate)}</span>
                             </span>
-                            <span className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                                <MapPin size={18} className="text-indigo-400" /> {comp.location}
+                            <span className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 text-sm sm:text-base">
+                                <MapPin size={18} className="text-[#007AFF] shrink-0" /> 
+                                <span className="truncate text-[16px] min-w-0">{comp.location}</span>
                             </span>
-                            <span className="flex items-center gap-1.5 bg-slate-800/50 px-3 py-1.5 rounded-lg border border-slate-700/50">
-                                <Users size={18} className="text-indigo-400" /> {comp.participants?.length || 0} / {comp.maxParticipants}
+                            <span className="flex items-center gap-1.5 bg-gray-100 px-3 py-1.5 rounded-lg border border-gray-200 text-sm sm:text-base shrink-0 text-[16px]">
+                                <Users size={18} className="text-[#007AFF]" /> {comp.participants?.length || 0} / {comp.maxParticipants}
                             </span>
                         </div>
 
+                        {comp.judges && comp.judges.length > 0 && (
+                            <div className="text-base text-gray-600 mb-4 break-words">
+                                <span className="font-semibold text-gray-700">Судді:</span> {comp.judges.join(', ')}
+                            </div>
+                        )}
+                        
                         <div className="mb-4">
-                            <p className="text-slate-300 leading-relaxed whitespace-pre-wrap text-base">{comp.description}</p>
+                            <p className="text-gray-700 leading-relaxed whitespace-pre-wrap text-base break-words">{comp.description}</p>
                         </div>
 
                         <div className="flex flex-wrap gap-2 mb-2">
-                             <Badge className="bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border-none px-3 py-1 text-sm font-normal text-[16px]">
+                             <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-200 border-none px-3 py-1 text-sm font-normal text-[16px]">
                                  Рівень: {comp.level}
                              </Badge>
                              {comp.categories && comp.categories.map((cat, idx) => (
-                                 <Badge key={idx} variant="outline" className="border-indigo-500/30 text-indigo-200 text-sm font-normal text-[16px] text-[15px]">
+                                 <Badge key={idx} variant="outline" className="border-blue-300 text-blue-700 text-sm font-normal text-[16px]">
                                      {cat}
                                  </Badge>
                              ))}
                         </div>
-                        
-                        {comp.judges && comp.judges.length > 0 && (
-                            <div className="text-base text-slate-400 mt-3">
-                                <span className="font-semibold text-slate-300">Судді:</span> {comp.judges.join(', ')}
-                            </div>
-                        )}
+
+                        {/* Status Badge */}
+                        <div className="mb-3">
+                            {isOrganizer && (comp.organizerId === userProfile?.id || userProfile?.role === 'admin') ? (
+                                <select
+                                    value={comp.status || 'planned'}
+                                    onChange={(e) => handleStatusChange(comp.id, e.target.value)}
+                                    className={`px-3 py-1.5 rounded-lg border-none text-sm font-medium ${getStatusConfig(comp.status || 'planned').color} cursor-pointer hover:opacity-80 transition-opacity text-[16px] max-w-full`}
+                                >
+                                    <option value="planned" className="bg-white">Реєстрація скоро відкриється</option>
+                                    <option value="registration_open" className="bg-white">Йде реєстрація</option>
+                                    <option value="registration_closed" className="bg-white">Реєстрація завершена</option>
+                                    <option value="completed" className="bg-white">Завершені</option>
+                                </select>
+                            ) : (
+                                <Badge className={`${getStatusConfig(comp.status || 'planned').color} border-none px-3 py-1.5 text-sm font-medium text-[16px]`}>
+                                    {getStatusConfig(comp.status || 'planned').label}
+                                </Badge>
+                            )}
+                        </div>
                     </div>
 
-                    <div className="flex flex-col gap-3 justify-end md:w-[220px] border-t md:border-t-0 md:border-l border-slate-700/50 pt-4 md:pt-0 md:pl-6">
+                    <div className="flex flex-col gap-3 justify-end md:w-[220px] border-t md:border-t-0 md:border-l border-gray-200 pt-4 md:pt-0 md:pl-6 shrink-0">
                          {isOrganizer && (comp.organizerId === userProfile?.id || userProfile?.role === 'admin') ? (
                              <>
                                 <Button 
-                                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white gap-2 h-11 text-base shadow-lg shadow-indigo-900/20"
+                                    className="w-full bg-[#007AFF] hover:bg-[#0066CC] text-white gap-2 h-11 text-base"
                                     onClick={() => openManage(comp)}
                                 >
                                     <Settings size={18} /> Керувати
                                 </Button>
                                 <Button 
                                     variant="outline"
-                                    className="w-full bg-transparent border-indigo-500/50 text-indigo-300 hover:bg-indigo-500/10 hover:text-white gap-2 h-11 text-base"
+                                    className="w-full bg-transparent border-[#007AFF] text-[#007AFF] hover:bg-blue-50 gap-2 h-11 text-base"
                                     onClick={() => openEdit(comp)}
                                 >
                                     <Edit size={18} /> Редагувати
                                 </Button>
                                 <Button 
                                     variant="destructive"
-                                    className="w-full gap-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/30 h-11 text-base"
+                                    className="w-full gap-2 bg-red-50 hover:bg-red-100 text-red-600 border border-red-300 h-11 text-base"
                                     onClick={() => handleDeleteClick(comp.id)}
                                 >
                                     <Trash2 size={18} /> Видалити
@@ -282,17 +327,17 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                              </>
                          ) : (
                              <>
-                                {comp.status === 'open' ? (
+                                {comp.status === 'registration_open' ? (
                                     userProfile?.role !== 'organizer' ? (
                                      <button 
                                         onClick={() => openRegister(comp.id)}
-                                        className="w-full py-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl font-medium cursor-pointer transition-all duration-300 shadow-[0_4px_14px_rgba(99,102,241,0.4)] hover:translate-y-[-2px] hover:shadow-[0_6px_20px_rgba(99,102,241,0.6)] text-base"
+                                        className="w-full py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl font-medium cursor-pointer transition-all duration-300 text-base"
                                      >
                                         Зареєструватися
                                      </button>
                                     ) : null
                                  ) : (
-                                     <div className="w-full py-3 bg-slate-800 text-slate-400 rounded-xl text-center border border-slate-700 font-medium text-base">
+                                     <div className="w-full py-3 bg-gray-100 text-gray-500 rounded-xl text-center border border-gray-300 font-medium text-base">
                                          Реєстрація закрита
                                      </div>
                                  )}
@@ -313,18 +358,18 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
       
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={deleteConfirmOpen} onOpenChange={setDeleteConfirmOpen}>
-        <AlertDialogContent className="bg-[rgba(30,41,59,0.95)] backdrop-blur-[20px] border-[rgba(99,102,241,0.2)] text-white">
+        <AlertDialogContent className="bg-white border-gray-200 text-gray-900">
             <AlertDialogHeader>
-            <AlertDialogTitle className="flex items-center gap-2 text-red-400 text-xl">
+            <AlertDialogTitle className="flex items-center gap-2 text-red-600 text-xl">
                 <AlertTriangle className="w-6 h-6" />
                 Видалити змагання?
             </AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400 text-base">
+            <AlertDialogDescription className="text-gray-600 text-base">
                 Ця дія незворотна. Це змагання та всі реєстрації будуть видалені назавжди.
             </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-            <AlertDialogCancel className="bg-transparent border-slate-600 text-slate-300 hover:bg-[rgba(99,102,241,0.1)] hover:text-white">Скасувати</AlertDialogCancel>
+            <AlertDialogCancel className="bg-white border-gray-300 text-gray-700 hover:bg-gray-100">Скасувати</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDelete} className="bg-red-600 text-white hover:bg-red-700 border-none">Видалити</AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>
@@ -332,22 +377,22 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
 
       {/* Registration Modal */}
       {registerModalOpen && (
-          <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-4">
-            <div className="bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] p-5 sm:p-8 rounded-2xl max-w-md w-full border border-[rgba(99,102,241,0.3)] shadow-[0_20px_60px_rgba(0,0,0,0.5)] max-h-[90vh] overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-4">
+            <div className="bg-white p-5 sm:p-8 rounded-2xl max-w-md w-full border border-gray-200 shadow-xl max-h-[90vh] overflow-y-auto">
                 <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-xl text-white font-bold text-[24px] font-normal">Реєстрація на змагання</h3>
+                    <h3 className="text-xl text-gray-900 font-semibold text-[24px]">Реєстрація на змагання</h3>
                     <button 
                         onClick={() => setRegisterModalOpen(false)}
-                        className="text-slate-400 hover:text-white transition-colors"
+                        className="text-gray-600 hover:text-gray-900 transition-colors"
                     >
                         <X size={24} />
                     </button>
                 </div>
                 
                 <div className="mb-5">
-                    <label className="block text-base text-slate-300 mb-2">Собака</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Собака</label>
                     <select 
-                        className="w-full p-3 bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-xl text-white focus:outline-none focus:border-indigo-500 text-base"
+                        className="w-full p-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:border-[#007AFF] text-base"
                         value={selectedDogId}
                         onChange={(e) => setSelectedDogId(e.target.value)}
                     >
@@ -358,9 +403,9 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                 </div>
 
                 <div className="mb-5">
-                    <label className="block text-base text-slate-300 mb-2">Клас / Категорія</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Клас / Категорія</label>
                     <select 
-                        className="w-full p-3 bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-xl text-white focus:outline-none focus:border-indigo-500 text-base"
+                        className="w-full p-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:border-[#007AFF] text-base"
                         value={selectedCategory}
                         onChange={(e) => setSelectedCategory(e.target.value)}
                     >
@@ -371,8 +416,19 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                     </select>
                 </div>
 
+                <div className="mb-5">
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Провідник собаки (якщо інший)</label>
+                    <input 
+                        type="text"
+                        className="w-full p-3 bg-white border border-gray-300 rounded-xl text-gray-900 focus:outline-none focus:border-[#007AFF] text-base placeholder:text-gray-400"
+                        value={handlerName}
+                        onChange={(e) => setHandlerName(e.target.value)}
+                        placeholder="Залиште порожнім, якщо ви провідник"
+                    />
+                </div>
+
                 <div className="mb-6 sm:mb-8">
-                    <label className="block text-base text-slate-300 mb-2">Документи (квитанція, робоча книжка)</label>
+                    <label className="block text-base text-gray-900 mb-2 font-medium">Документи (квитанція, робоча книжка)</label>
                     <div className="relative">
                         <input 
                             type="file" 
@@ -383,7 +439,7 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                         />
                         <label 
                             htmlFor="file-upload"
-                            className={`flex items-center justify-center gap-2 w-full p-4 bg-[rgba(15,23,42,0.5)] border-2 border-dashed rounded-xl cursor-pointer transition-all ${registerFiles.length > 0 ? 'border-indigo-500 text-indigo-400' : 'border-slate-700 text-slate-400 hover:border-indigo-500/50 hover:text-slate-300'} text-base`}
+                            className={`flex items-center justify-center gap-2 w-full p-4 bg-white border-2 border-dashed rounded-xl cursor-pointer transition-all ${registerFiles.length > 0 ? 'border-[#007AFF] text-[#007AFF]' : 'border-gray-300 text-gray-600 hover:border-[#007AFF] hover:text-gray-900'} text-base`}
                         >
                             <Upload size={20} />
                             {registerFiles.length > 0 ? `${registerFiles.length} файлів обрано` : 'Завантажити файли'}
@@ -395,14 +451,14 @@ export default function CompetitionsPage({ isLoggedIn, userProfile, showToast, o
                     <button 
                         onClick={handleRegister}
                         disabled={uploading}
-                        className="flex-1 py-3 bg-gradient-to-br from-indigo-500 to-purple-600 text-white rounded-xl font-medium transition-all hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 text-base shadow-[0_4px_14px_rgba(99,102,241,0.4)]"
+                        className="flex-1 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center gap-2 text-base"
                     >
                         {uploading ? 'Обробка...' : 'Підтвердити'}
                     </button>
                     <button 
                         onClick={() => setRegisterModalOpen(false)}
                         disabled={uploading}
-                        className="flex-1 py-3 bg-transparent border border-slate-600 text-slate-300 rounded-xl hover:bg-slate-800 transition-colors text-base"
+                        className="flex-1 py-3 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-100 transition-colors text-base"
                     >
                         Скасувати
                     </button>

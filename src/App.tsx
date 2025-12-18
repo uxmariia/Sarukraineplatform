@@ -88,12 +88,40 @@ export default function App() {
     try {
       // Always get fresh session if no token provided
       if (!token) {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          console.warn('No session available for profile fetch');
+        console.log('[fetchProfile] No token provided, getting session...');
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('[fetchProfile] Error getting session:', error);
           return;
         }
-        token = session.access_token;
+        
+        if (!session) {
+          console.warn('[fetchProfile] No session available');
+          return;
+        }
+        
+        // Check if token is expired and refresh if needed
+        const expiresAt = session.expires_at;
+        const now = Math.floor(Date.now() / 1000);
+        
+        if (expiresAt && expiresAt < now + 60) {
+          console.log('[fetchProfile] Token expiring soon, refreshing session...');
+          const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError || !newSession) {
+            console.error('[fetchProfile] Failed to refresh session:', refreshError);
+            await supabase.auth.signOut();
+            setIsLoggedIn(false);
+            setUserProfile(null);
+            return;
+          }
+          
+          token = newSession.access_token;
+          console.log('[fetchProfile] ✓ Session refreshed successfully');
+        } else {
+          token = session.access_token;
+        }
       }
       
       const profile = await apiRequest('/profile', 'GET', undefined, token);
@@ -105,17 +133,18 @@ export default function App() {
       if (e.message && (e.message.includes('401') || e.message.includes('Unauthorized'))) {
           console.error('Profile fetch failed - unauthorized. Verifying session...');
           
-          // Double check session before signing out
-          const { data: { session } } = await supabase.auth.getSession();
-          if (!session) {
+          // Try to refresh session
+          const { data: { session }, error } = await supabase.auth.refreshSession();
+          
+          if (!session || error) {
               console.error('No valid session found, signing out');
               await supabase.auth.signOut();
               setIsLoggedIn(false);
               setUserProfile(null);
           } else {
-              console.log('Session still valid, retrying profile fetch...');
+              console.log('Session refreshed, retrying profile fetch...');
               // Retry once with fresh token
-              setTimeout(() => fetchProfile(session.access_token), 1000);
+              setTimeout(() => fetchProfile(session.access_token), 500);
           }
       } else if (e.message && e.message.includes('503')) {
           // Server is temporarily unavailable (likely restarting), retry after delay
@@ -173,11 +202,8 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0e27] text-gray-200">
-      <div className="fixed inset-0 z-0 bg-gradient-to-br from-[#0a0e27] via-[#1a1f3a] to-[#0f1629]">
-        <div className="absolute inset-0 animate-[rotate_30s_linear_infinite]">
-          <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle,rgba(99,102,241,0.1)_0%,transparent_50%)]" />
-        </div>
+    <div className="min-h-screen bg-[#F5F5F7] text-gray-900">
+      <div className="fixed inset-0 z-0 bg-[#F5F5F7]">
       </div>
 
       <ToastContainer toasts={toasts} onRemove={removeToast} />
@@ -219,13 +245,14 @@ export default function App() {
         {currentPage === 'teams' && <TeamsPage userProfile={userProfile} showToast={showToast} />}
         {currentPage === 'documents' && <DocumentsPage userProfile={userProfile} showToast={showToast} />}
         {currentPage === 'results' && <ResultsPage showToast={showToast} />}
-        {currentPage === 'rating' && <RatingPage />}
+        {currentPage === 'rating' && <RatingPage showToast={showToast} />}
         {currentPage === 'admin' && <AdminPage userProfile={userProfile} showToast={showToast} />}
-        {currentPage === 'manage-competition' && selectedCompetitionId && (
+        {currentPage === 'manage-competition' && selectedCompetitionId && isLoggedIn && userProfile && (
             <ManageCompetitionPage 
                 competitionId={selectedCompetitionId} 
                 onBack={() => showPage('competitions')} 
-                showToast={showToast} 
+                showToast={showToast}
+                userProfile={userProfile}
             />
         )}
       </div>

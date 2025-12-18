@@ -54,6 +54,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
             const competitionsWithParticipants = await Promise.all(
                 data.map(async (comp: Competition) => {
                     try {
+                        console.log(`Fetching results for competition ${comp.id}:`, comp.name);
                         const details = await apiRequest(`/competitions/${comp.id}/results`);
                         console.log(`Participants for ${comp.name}:`, details.participants);
                         
@@ -65,6 +66,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                         return { ...comp, participants: details.participants || [] };
                     } catch (e) {
                         console.error(`Failed to load participants for ${comp.id}:`, e);
+                        console.error('Error details:', e instanceof Error ? e.message : String(e));
                         return { ...comp, participants: [] };
                     }
                 })
@@ -73,6 +75,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
             setCompetitions(competitionsWithParticipants);
         } catch (e) {
             console.error('Failed to load competitions:', e);
+            console.error('Error details:', e instanceof Error ? e.message : String(e));
             showToast('Помилка завантаження результатів', 'error');
         } finally {
             setLoading(false);
@@ -86,7 +89,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
     if (loading) {
         return (
             <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-[60px]">
-                <div className="text-center text-slate-400">Завантаження...</div>
+                <div className="text-center text-gray-500">Завантаження...</div>
             </div>
         );
     }
@@ -94,16 +97,16 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
     return (
         <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 sm:py-[60px]">
             <div className="mb-8 sm:mb-12 text-left">
-                <h1 className="text-4xl sm:text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+                <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
                     Результати
                 </h1>
-                <p className="text-base sm:text-lg text-slate-400">Результати минулих змагань</p>
+                <p className="text-base sm:text-lg text-gray-600">Результати минулих змагань</p>
             </div>
 
             {competitions.length === 0 ? (
-                <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-[60px_20px] sm:p-[100px_40px] text-center">
-                    <Medal className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-                    <p className="text-base sm:text-lg text-slate-500">Немає доступних результатів</p>
+                <div className="bg-white shadow-sm rounded-[20px] p-[60px_20px] sm:p-[100px_40px] text-center">
+                    <Medal className="w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+                    <p className="text-base sm:text-lg text-gray-500">Немає доступних результатів</p>
                 </div>
             ) : (
                 <div className="space-y-6">
@@ -120,8 +123,8 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                         confirmedParticipants.forEach(p => {
                             const key = p.class || 'Без класу';
                             
-                            if (p.results?.place) {
-                                // Has results with place
+                            if (p.results && (p.results.search || p.results.obedience || p.results.total || p.results.place)) {
+                                // Has results (any score or place)
                                 if (!groupsWithResults[key]) groupsWithResults[key] = [];
                                 groupsWithResults[key].push(p);
                             } else {
@@ -143,19 +146,19 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                         return (
                             <Card 
                                 key={competition.id} 
-                                className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-[rgba(99,102,241,0.2)] overflow-hidden"
+                                className="bg-white shadow-sm hover:shadow-lg transition-shadow overflow-hidden"
                             >
                                 <CardHeader 
-                                    className={`${hasAnyData ? 'cursor-pointer hover:bg-[rgba(99,102,241,0.05)] transition-colors' : ''}`}
+                                    className={`${hasAnyData ? 'cursor-pointer hover:bg-gray-50 transition-colors' : ''}`}
                                     onClick={() => hasAnyData && toggleExpand(competition.id)}
                                 >
                                     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                                         <div className="flex-1">
-                                            <CardTitle className="text-xl sm:text-2xl text-white mb-2 flex items-start gap-2">
-                                                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-400 flex-shrink-0 mt-1" />
-                                                <span className="pt-[0px] pr-[0px] pb-[4px] pl-[0px]">{competition.name}</span>
+                                            <CardTitle className="text-xl sm:text-2xl text-gray-900 mb-2 flex items-start gap-2">
+                                                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-[#007AFF] flex-shrink-0 mt-1" />
+                                                <span className="pt-[0px] pr-[0px] pb-[4px] pl-[0px] font-semibold">{competition.name}</span>
                                             </CardTitle>
-                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base text-slate-400 ml-7 sm:ml-8 pt-[0px] pr-[0px] pb-[8px] pl-[0px]">
+                                            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 text-sm sm:text-base text-gray-600 ml-7 sm:ml-8 pt-[0px] pr-[0px] pb-[8px] pl-[0px]">
                                                 <div className="flex items-center gap-2">
                                                     <Calendar className="w-4 h-4" />
                                                     {new Date(competition.date).toLocaleDateString('uk-UA')}
@@ -170,7 +173,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                             <Button
                                                 variant="ghost"
                                                 size="sm"
-                                                className="text-indigo-400 hover:text-indigo-300 hover:bg-[rgba(99,102,241,0.1)] self-start sm:self-center"
+                                                className="text-[#007AFF] hover:text-[#0066CC] hover:bg-blue-50 self-start sm:self-center"
                                             >
                                                 {isExpanded ? (
                                                     <>
@@ -186,7 +189,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                             </Button>
                                         )}
                                         {!hasAnyData && (
-                                            <Badge variant="outline" className="border-slate-600 text-slate-500 self-start sm:self-center">
+                                            <Badge variant="outline" className="border-gray-300 text-gray-600 self-start sm:self-center">
                                                 Немає учасників
                                             </Badge>
                                         )}
@@ -202,7 +205,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                 
                                                 return (
                                                     <div key={groupName}>
-                                                        <h3 className="text-lg sm:text-xl text-indigo-300 mb-4 pb-2 border-b border-indigo-500/20">
+                                                        <h3 className="text-lg sm:text-xl text-gray-900 mb-4 pb-2 border-b border-gray-200">
                                                             {groupName}
                                                         </h3>
 
@@ -211,49 +214,44 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                             {groupParticipants.map((p, idx) => (
                                                                 <div 
                                                                     key={p.id || `${p.userId}-${p.dogId}-${idx}`}
-                                                                    className="bg-[rgba(15,23,42,0.5)] border border-indigo-500/20 rounded-xl p-4"
+                                                                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
                                                                 >
                                                                     <div className="flex items-start gap-3 mb-3">
-                                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                                                                            p.results?.place === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                            p.results?.place === 2 ? 'bg-slate-300/20 text-slate-300' :
-                                                                            p.results?.place === 3 ? 'bg-orange-700/20 text-orange-400' :
-                                                                            'bg-slate-700/20 text-slate-500'
-                                                                        }`}>
+                                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100 text-gray-700 font-medium">
                                                                             {p.results?.place}
                                                                         </div>
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="text-white font-medium text-base truncate">{p.userName}</div>
-                                                                            <div className="text-slate-400 text-sm truncate">{p.dogName}</div>
-                                                                            {p.dogBreed && <div className="text-slate-500 text-xs">{p.dogBreed}</div>}
+                                                                            <div className="text-gray-900 font-medium text-base truncate">{p.userName}</div>
+                                                                            <div className="text-gray-600 text-sm truncate">{p.dogName}</div>
+                                                                            {p.dogBreed && <div className="text-gray-500 text-xs">{p.dogBreed}</div>}
                                                                         </div>
                                                                     </div>
                                                                     
                                                                     <div className="grid grid-cols-2 gap-3 mb-3">
-                                                                        <div className="bg-[rgba(99,102,241,0.1)] rounded-lg p-2">
-                                                                            <div className="text-slate-400 text-xs mb-1">Пошук</div>
-                                                                            <div className="text-white">{p.results?.search?.toFixed(1) || '-'}</div>
+                                                                        <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                                                                            <div className="text-gray-600 text-xs mb-1">Пошук</div>
+                                                                            <div className="text-gray-900 font-medium">{p.results?.search?.toFixed(1) || '-'}</div>
                                                                         </div>
-                                                                        <div className="bg-[rgba(99,102,241,0.1)] rounded-lg p-2">
-                                                                            <div className="text-slate-400 text-xs mb-1">Послух</div>
-                                                                            <div className="text-white">{p.results?.obedience?.toFixed(1) || '-'}</div>
+                                                                        <div className="bg-gray-50 rounded-lg p-2 border border-gray-100">
+                                                                            <div className="text-gray-600 text-xs mb-1">Послух</div>
+                                                                            <div className="text-gray-900 font-medium">{p.results?.obedience?.toFixed(1) || '-'}</div>
                                                                         </div>
                                                                     </div>
                                                                     
-                                                                    <div className="pt-3 border-t border-indigo-500/20 space-y-2">
+                                                                    <div className="pt-3 border-t border-gray-200 space-y-2">
                                                                         <div className="flex justify-between items-center">
-                                                                            <span className="text-slate-400 text-sm">Загальний бал:</span>
-                                                                            <span className="text-indigo-300 font-bold text-lg">{p.results?.total?.toFixed(1) || '-'}</span>
+                                                                            <span className="text-gray-600 text-sm">Загальний бал:</span>
+                                                                            <span className="text-[#007AFF] font-bold text-lg">{p.results?.total?.toFixed(1) || '-'}</span>
                                                                         </div>
                                                                         <div className="flex justify-between items-center">
-                                                                            <span className="text-slate-400 text-sm">Оцінка:</span>
+                                                                            <span className="text-gray-600 text-sm">Оцінка:</span>
                                                                             <Badge variant="outline" className={`text-xs py-0.5 font-normal ${
-                                                                                p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                                                p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                                                p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                                                p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                                                p.results?.qualification === 'Неостатньо' ? 'border-red-500 text-red-400' :
-                                                                                'border-slate-700 text-slate-500'
+                                                                                p.results?.qualification === 'Відмінно' ? 'border-green-600 text-green-700 bg-green-50' :
+                                                                                p.results?.qualification === 'Дуже добре' ? 'border-blue-600 text-blue-700 bg-blue-50' :
+                                                                                p.results?.qualification === 'Добре' ? 'border-cyan-600 text-cyan-700 bg-cyan-50' :
+                                                                                p.results?.qualification === 'Задовільно' ? 'border-yellow-600 text-yellow-700 bg-yellow-50' :
+                                                                                p.results?.qualification === 'Недостатньо' ? 'border-red-600 text-red-700 bg-red-50' :
+                                                                                'border-gray-300 text-gray-600 bg-gray-50'
                                                                             }`}>
                                                                                 {p.results?.qualification || '—'}
                                                                             </Badge>
@@ -267,48 +265,43 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                         <div className="hidden md:block overflow-x-auto">
                                                             <table className="w-full border-collapse">
                                                                 <thead>
-                                                                    <tr className="bg-[rgba(99,102,241,0.15)]">
-                                                                        <th className="p-3 text-left text-white">#</th>
-                                                                        <th className="p-3 text-left text-white">Учасник</th>
-                                                                        <th className="p-3 text-left text-white">Собака</th>
-                                                                        <th className="p-3 text-center text-white">Пошук</th>
-                                                                        <th className="p-3 text-center text-white">Послух</th>
-                                                                        <th className="p-3 text-center text-white">Заг. бал</th>
-                                                                        <th className="p-3 text-left text-white">Оцінка</th>
+                                                                    <tr className="bg-gray-50">
+                                                                        <th className="p-3 text-left text-gray-900">#</th>
+                                                                        <th className="p-3 text-left text-gray-900">Учасник</th>
+                                                                        <th className="p-3 text-left text-gray-900">Собака</th>
+                                                                        <th className="p-3 text-center text-gray-900">Пошук</th>
+                                                                        <th className="p-3 text-center text-gray-900">Послух</th>
+                                                                        <th className="p-3 text-center text-gray-900">Заг. бал</th>
+                                                                        <th className="p-3 text-left text-gray-900">Оцінка</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {groupParticipants.map((p, idx) => (
                                                                         <tr 
                                                                             key={p.id || `${p.userId}-${p.dogId}-${idx}`}
-                                                                            className="border-t border-[rgba(99,102,241,0.1)] hover:bg-[rgba(99,102,241,0.05)]"
+                                                                            className="border-t border-gray-200 hover:bg-gray-50"
                                                                         >
                                                                             <td className="p-3">
-                                                                                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                                                                                    p.results?.place === 1 ? 'bg-yellow-500/20 text-yellow-400' :
-                                                                                    p.results?.place === 2 ? 'bg-slate-300/20 text-slate-300' :
-                                                                                    p.results?.place === 3 ? 'bg-orange-700/20 text-orange-400' :
-                                                                                    'text-slate-500'
-                                                                                }`}>
+                                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-700 font-medium">
                                                                                     {p.results?.place}
                                                                                 </div>
                                                                             </td>
-                                                                            <td className="p-3 text-slate-300">{p.userName}</td>
+                                                                            <td className="p-3 text-gray-900">{p.userName}</td>
                                                                             <td className="p-3">
-                                                                                <div className="text-slate-300">{p.dogName}</div>
-                                                                                {p.dogBreed && <div className="text-sm text-slate-500">{p.dogBreed}</div>}
+                                                                                <div className="text-gray-900">{p.dogName}</div>
+                                                                                {p.dogBreed && <div className="text-sm text-gray-600">{p.dogBreed}</div>}
                                                                             </td>
-                                                                            <td className="p-3 text-center text-slate-400">{p.results?.search?.toFixed(1) || '-'}</td>
-                                                                            <td className="p-3 text-center text-slate-400">{p.results?.obedience?.toFixed(1) || '-'}</td>
-                                                                            <td className="p-3 text-center text-indigo-300 font-bold">{p.results?.total?.toFixed(1) || '-'}</td>
+                                                                            <td className="p-3 text-center text-gray-700">{p.results?.search?.toFixed(1) || '-'}</td>
+                                                                            <td className="p-3 text-center text-gray-700">{p.results?.obedience?.toFixed(1) || '-'}</td>
+                                                                            <td className="p-3 text-center text-[#007AFF] font-bold">{p.results?.total?.toFixed(1) || '-'}</td>
                                                                             <td className="p-3">
                                                                                 <Badge variant="outline" className={`text-sm py-1 font-normal ${
-                                                                                    p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                                                    p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                                                    p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                                                    p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                                                    p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-400' :
-                                                                                    'border-slate-700 text-slate-500'
+                                                                                    p.results?.qualification === 'Відмінно' ? 'border-green-600 text-green-700 bg-green-50' :
+                                                                                    p.results?.qualification === 'Дуже добре' ? 'border-blue-600 text-blue-700 bg-blue-50' :
+                                                                                    p.results?.qualification === 'Добре' ? 'border-cyan-600 text-cyan-700 bg-cyan-50' :
+                                                                                    p.results?.qualification === 'Задовільно' ? 'border-yellow-600 text-yellow-700 bg-yellow-50' :
+                                                                                    p.results?.qualification === 'Недостатньо' ? 'border-red-600 text-red-700 bg-red-50' :
+                                                                                    'border-gray-300 text-gray-600 bg-gray-50'
                                                                                 }`}>
                                                                                     {p.results?.qualification || '—'}
                                                                                 </Badge>
@@ -328,7 +321,7 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                 
                                                 return (
                                                     <div key={groupName}>
-                                                        <h3 className="text-lg sm:text-xl text-indigo-300 mb-4 pb-2 border-b border-indigo-500/20">
+                                                        <h3 className="text-lg sm:text-xl text-gray-900 mb-4 pb-2 border-b border-gray-200">
                                                             {groupName}
                                                         </h3>
 
@@ -337,47 +330,16 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                             {groupParticipants.map((p, idx) => (
                                                                 <div 
                                                                     key={p.id || `${p.userId}-${p.dogId}-${idx}`}
-                                                                    className="bg-[rgba(15,23,42,0.5)] border border-indigo-500/20 rounded-xl p-4"
+                                                                    className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm"
                                                                 >
                                                                     <div className="flex items-start gap-3 mb-3">
-                                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-slate-700/20 text-slate-500">
-                                                                            {p.results?.place}
+                                                                        <div className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 bg-gray-100 text-gray-700 font-medium">
+                                                                            {idx + 1}
                                                                         </div>
                                                                         <div className="flex-1 min-w-0">
-                                                                            <div className="text-white font-medium text-base truncate">{p.userName}</div>
-                                                                            <div className="text-slate-400 text-sm truncate">{p.dogName}</div>
-                                                                            {p.dogBreed && <div className="text-slate-500 text-xs">{p.dogBreed}</div>}
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="grid grid-cols-2 gap-3 mb-3">
-                                                                        <div className="bg-[rgba(99,102,241,0.1)] rounded-lg p-2">
-                                                                            <div className="text-slate-400 text-xs mb-1">Пошук</div>
-                                                                            <div className="text-white">{p.results?.search?.toFixed(1) || '-'}</div>
-                                                                        </div>
-                                                                        <div className="bg-[rgba(99,102,241,0.1)] rounded-lg p-2">
-                                                                            <div className="text-slate-400 text-xs mb-1">Послух</div>
-                                                                            <div className="text-white">{p.results?.obedience?.toFixed(1) || '-'}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                    
-                                                                    <div className="pt-3 border-t border-indigo-500/20 space-y-2">
-                                                                        <div className="flex justify-between items-center">
-                                                                            <span className="text-slate-400 text-sm">Загальний бал:</span>
-                                                                            <span className="text-indigo-300 font-bold text-lg">{p.results?.total?.toFixed(1) || '-'}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between items-center">
-                                                                            <span className="text-slate-400 text-sm">Оцінка:</span>
-                                                                            <Badge variant="outline" className={`text-xs py-0.5 font-normal ${
-                                                                                p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                                                p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                                                p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                                                p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                                                p.results?.qualification === 'Неостатньо' ? 'border-red-500 text-red-400' :
-                                                                                'border-slate-700 text-slate-500'
-                                                                            }`}>
-                                                                                {p.results?.qualification || '—'}
-                                                                            </Badge>
+                                                                            <div className="text-gray-900 font-medium text-base truncate">{p.userName}</div>
+                                                                            <div className="text-gray-600 text-sm truncate">{p.dogName}</div>
+                                                                            {p.dogBreed && <div className="text-gray-500 text-xs">{p.dogBreed}</div>}
                                                                         </div>
                                                                     </div>
                                                                 </div>
@@ -388,46 +350,27 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                                                         <div className="hidden md:block overflow-x-auto">
                                                             <table className="w-full border-collapse">
                                                                 <thead>
-                                                                    <tr className="bg-[rgba(99,102,241,0.15)]">
-                                                                        <th className="p-3 text-left text-white">#</th>
-                                                                        <th className="p-3 text-left text-white">Учасник</th>
-                                                                        <th className="p-3 text-left text-white">Собака</th>
-                                                                        <th className="p-3 text-center text-white">Пошук</th>
-                                                                        <th className="p-3 text-center text-white">Послух</th>
-                                                                        <th className="p-3 text-center text-white">Заг. бал</th>
-                                                                        <th className="p-3 text-left text-white">Оцінка</th>
+                                                                    <tr className="bg-gray-50">
+                                                                        <th className="p-3 text-left text-gray-900">#</th>
+                                                                        <th className="p-3 text-left text-gray-900">Учасник</th>
+                                                                        <th className="p-3 text-left text-gray-900">Собака</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody>
                                                                     {groupParticipants.map((p, idx) => (
                                                                         <tr 
                                                                             key={p.id || `${p.userId}-${p.dogId}-${idx}`}
-                                                                            className="border-t border-[rgba(99,102,241,0.1)] hover:bg-[rgba(99,102,241,0.05)]"
+                                                                            className="border-t border-gray-200 hover:bg-gray-50"
                                                                         >
                                                                             <td className="p-3">
-                                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-slate-700/20 text-slate-500">
-                                                                                    {p.results?.place}
+                                                                                <div className="w-8 h-8 rounded-full flex items-center justify-center bg-gray-100 text-gray-700 font-medium">
+                                                                                    {idx + 1}
                                                                                 </div>
                                                                             </td>
-                                                                            <td className="p-3 text-slate-300">{p.userName}</td>
+                                                                            <td className="p-3 text-gray-900">{p.userName}</td>
                                                                             <td className="p-3">
-                                                                                <div className="text-slate-300">{p.dogName}</div>
-                                                                                {p.dogBreed && <div className="text-sm text-slate-500">{p.dogBreed}</div>}
-                                                                            </td>
-                                                                            <td className="p-3 text-center text-slate-400">{p.results?.search?.toFixed(1) || '-'}</td>
-                                                                            <td className="p-3 text-center text-slate-400">{p.results?.obedience?.toFixed(1) || '-'}</td>
-                                                                            <td className="p-3 text-center text-indigo-300 font-bold">{p.results?.total?.toFixed(1) || '-'}</td>
-                                                                            <td className="p-3">
-                                                                                <Badge variant="outline" className={`text-sm py-1 font-normal ${
-                                                                                    p.results?.qualification === 'Відмінно' ? 'border-green-500 text-green-400' :
-                                                                                    p.results?.qualification === 'Дуже добре' ? 'border-blue-500 text-blue-400' :
-                                                                                    p.results?.qualification === 'Добре' ? 'border-cyan-500 text-cyan-400' :
-                                                                                    p.results?.qualification === 'Задовільно' ? 'border-yellow-500 text-yellow-400' :
-                                                                                    p.results?.qualification === 'Недостатньо' ? 'border-red-500 text-red-400' :
-                                                                                    'border-slate-700 text-slate-500'
-                                                                                }`}>
-                                                                                    {p.results?.qualification || '—'}
-                                                                                </Badge>
+                                                                                <div className="text-gray-900">{p.dogName}</div>
+                                                                                {p.dogBreed && <div className="text-sm text-gray-600">{p.dogBreed}</div>}
                                                                             </td>
                                                                         </tr>
                                                                     ))}

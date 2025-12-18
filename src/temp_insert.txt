@@ -1,0 +1,11 @@
+
+                <div className="mb-5">
+                    <label className="block text-base text-slate-300 mb-2">Провідник собаки (якщо інший)</label>
+                    <input 
+                        type="text"
+                        className="w-full p-3 bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-xl text-white focus:outline-none focus:border-indigo-500 text-base placeholder:text-slate-500"
+                        value={handlerName}
+                        onChange={(e) => setHandlerName(e.target.value)}
+                        placeholder="Залиште порожнім, якщо ви провідник"
+                    />
+                </div>

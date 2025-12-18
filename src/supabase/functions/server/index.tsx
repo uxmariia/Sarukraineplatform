@@ -55,7 +55,11 @@ const getUser = async (c: any) => {
   }
 
   try {
-    console.log('getUser: Attempting to verify user token...');
+    console.log('getUser: Attempting to verify user token...', {
+      tokenLength: token.length,
+      tokenStart: token.substring(0, 20),
+      tokenEnd: token.substring(token.length - 10)
+    });
     
     // Use supabaseAdmin with SERVICE_ROLE_KEY to verify any user token
     const { data: { user }, error } = await supabaseAdmin.auth.getUser(token);
@@ -70,7 +74,7 @@ const getUser = async (c: any) => {
                tokenPrefix: token.substring(0, 10) + '...' 
              });
         } else {
-             console.log('getUser: AuthSessionMissingError - likely anon key or invalid token');
+             console.log('getUser: AuthSessionMissingError - token might be expired or invalid');
         }
         return null;
     }
@@ -267,7 +271,7 @@ app.post(`${BASE_PATH}/competitions`, async (c) => {
   }
   
   const data = await c.req.json();
-  const newComp = { ...data, id: crypto.randomUUID(), organizerId: user.id, status: 'open', participants: [] };
+  const newComp = { ...data, id: crypto.randomUUID(), organizerId: user.id, participants: [] };
   
   let comps = (await kv.get('competitions')) || [];
   if (!Array.isArray(comps)) comps = [];
@@ -358,8 +362,11 @@ app.put(`${BASE_PATH}/competitions/:id/participants`, async (c) => {
 
     if (pIndex === -1) return c.json({error: 'Participant not found'}, 404);
 
+    // Update participant data
     if (status) comp.participants[pIndex].status = status;
     if (results) comp.participants[pIndex].results = results;
+    // IMPORTANT: Update class field from category to maintain consistency
+    if (category) comp.participants[pIndex].class = category;
 
     comps[index] = comp;
     await kv.set('competitions', comps);
@@ -371,14 +378,18 @@ app.post(`${BASE_PATH}/competitions/:id/register`, async (c) => {
     const user = await getUser(c);
     if (!user) return c.json({ error: 'Unauthorized' }, 401);
     const compId = c.req.param('id');
-    const { dogId, category, documents } = await c.req.json();
+    const { dogId, category, handlerName, documents } = await c.req.json();
 
     let comps = (await kv.get('competitions')) || [];
     const index = comps.findIndex((c:any) => c.id === compId);
     if (index === -1) return c.json({error: 'Competition not found'}, 404);
 
     const comp = comps[index];
-    if (comp.status !== 'open') return c.json({error: 'Registration closed'}, 400);
+    
+    // Check if registration is open
+    if (comp.status !== 'registration_open') {
+        return c.json({error: 'Реєстрація на ці змагання закрита'}, 400);
+    }
 
     if (!comp.participants) comp.participants = [];
     
@@ -399,6 +410,7 @@ app.post(`${BASE_PATH}/competitions/:id/register`, async (c) => {
         userId: user.id, 
         dogId, 
         class: category, // Store in 'class' field (value comes from 'category' in request)
+        handlerName: handlerName || undefined,
         documents,
         status: 'registered', 
         date: new Date().toISOString() 
@@ -430,19 +442,28 @@ app.get(`${BASE_PATH}/competitions/:id/details`, async (c) => {
     // Hydrate participants
     const participants = comp.participants || [];
     const hydratedParticipants = await Promise.all(participants.map(async (p: any) => {
-        // Fetch User Name
+        // Fetch User Name (Owner)
         const participantProfile = await getProfile(p.userId);
         
-        // Fetch Dog Name and Birth
+        // Fetch Dog Details
         const userDogs = (await kv.get(`dogs:${p.userId}`)) || [];
         const dog = userDogs.find((d: any) => d.id === p.dogId);
         
+        // Handler is stored as a name string, not an ID
+        const handlerName = p.handlerName || participantProfile.name || 'Unknown';
+        
         return {
             ...p,
+            // Map 'class' field to 'category' for frontend compatibility
+            category: p.class,
             userName: participantProfile.name || 'Unknown',
+            handlerName: handlerName,
             dogName: dog?.name || 'Unknown',
             dogBirth: dog?.birth || null,
-            dogBreed: dog?.pedigree || ''
+            dogBreed: dog?.breed || '',
+            dogPedigree: dog?.pedigree || '',
+            dogChip: dog?.chip || '',
+            dogWorkbook: dog?.workbook || ''
         };
     }));
 
@@ -454,48 +475,64 @@ app.get(`${BASE_PATH}/competitions/:id/details`, async (c) => {
 
 // Public endpoint for viewing competition results
 app.get(`${BASE_PATH}/competitions/:id/results`, async (c) => {
-    const compId = c.req.param('id');
-    
-    const comps = (await kv.get('competitions')) || [];
-    const comp = comps.find((c: any) => c.id === compId);
-    
-    if (!comp) return c.json({ error: 'Competition not found' }, 404);
+    try {
+        const compId = c.req.param('id');
+        
+        const comps = (await kv.get('competitions')) || [];
+        const comp = comps.find((c: any) => c.id === compId);
+        
+        if (!comp) return c.json({ error: 'Competition not found' }, 404);
 
-    // Hydrate participants (public view - only confirmed participants)
-    const participants = (comp.participants || []).filter((p: any) => p.status === 'confirmed');
-    const hydratedParticipants = await Promise.all(participants.map(async (p: any) => {
-        // Fetch User Name
-        const participantProfile = await getProfile(p.userId);
-        
-        // Fetch Dog Name and Birth
-        const userDogs = (await kv.get(`dogs:${p.userId}`)) || [];
-        const dog = userDogs.find((d: any) => d.id === p.dogId);
-        
-        // Log participant data to debug
-        console.log('Participant data:', {
-            userId: p.userId,
-            dogId: p.dogId,
-            class: p.class,
-            category: p.category,
-            status: p.status
+        // Hydrate participants (public view - only confirmed participants)
+        const participants = (comp.participants || []).filter((p: any) => p.status === 'confirmed');
+        const hydratedParticipants = await Promise.all(participants.map(async (p: any) => {
+            try {
+                // Fetch User Name
+                const participantProfile = await getProfile(p.userId);
+                
+                // Fetch Dog Name and Birth
+                const userDogs = (await kv.get(`dogs:${p.userId}`)) || [];
+                const dog = userDogs.find((d: any) => d.id === p.dogId);
+                
+                // Log participant data to debug
+                console.log('Participant data:', {
+                    userId: p.userId,
+                    dogId: p.dogId,
+                    class: p.class,
+                    category: p.category,
+                    status: p.status
+                });
+                
+                return {
+                    ...p, // This includes id, userId, dogId, status, results, class, category, etc.
+                    userName: participantProfile?.name || 'Unknown',
+                    dogName: dog?.name || 'Unknown',
+                    dogBirth: dog?.birth || null,
+                    dogBreed: dog?.pedigree || ''
+                };
+            } catch (err) {
+                console.error(`Error hydrating participant ${p.userId}:`, err);
+                return {
+                    ...p,
+                    userName: 'Unknown',
+                    dogName: 'Unknown',
+                    dogBirth: null,
+                    dogBreed: ''
+                };
+            }
+        }));
+
+        return c.json({
+            id: comp.id,
+            name: comp.name,
+            date: comp.date,
+            location: comp.location,
+            participants: hydratedParticipants
         });
-        
-        return {
-            ...p, // This includes id, userId, dogId, status, results, class, category, etc.
-            userName: participantProfile.name || 'Unknown',
-            dogName: dog?.name || 'Unknown',
-            dogBirth: dog?.birth || null,
-            dogBreed: dog?.pedigree || ''
-        };
-    }));
-
-    return c.json({
-        id: comp.id,
-        name: comp.name,
-        date: comp.date,
-        location: comp.location,
-        participants: hydratedParticipants
-    });
+    } catch (error) {
+        console.error('Error in /competitions/:id/results:', error);
+        return c.json({ error: 'Internal server error', details: String(error) }, 500);
+    }
 });
 
 // --- ADMIN / GENERIC RESOURCES (Judges, Teams, Documents) ---
@@ -713,6 +750,150 @@ app.get(`${BASE_PATH}/admin/audit`, async (c) => {
     
     const logs = (await kv.get('audit_logs')) || [];
     return c.json(logs);
+});
+
+// --- RATING DEBUG ENDPOINT ---
+app.get(`${BASE_PATH}/rating/debug`, async (c) => {
+    try {
+        const allCompetitions = (await kv.get('competitions')) || [];
+        const debugInfo = {
+            totalCompetitions: allCompetitions.length,
+            competitions: allCompetitions.map((comp: any) => ({
+                name: comp.name,
+                status: comp.status,
+                level: comp.level,
+                participantsCount: comp.participants?.length || 0,
+                participants: comp.participants?.map((p: any) => ({
+                    userId: p.userId,
+                    dogId: p.dogId,
+                    class: p.class,
+                    category: p.category,
+                    status: p.status,
+                    hasResults: !!p.results,
+                    total: p.results?.total
+                }))
+            }))
+        };
+        return c.json(debugInfo);
+    } catch (e) {
+        console.error('[Rating Debug] Error:', e);
+        return c.json({ error: 'Debug failed' }, 500);
+    }
+});
+
+// --- RATING ENDPOINT ---
+app.get(`${BASE_PATH}/rating`, async (c) => {
+    try {
+        const discipline = c.req.query('discipline') || 'rh-fl-b';
+        
+        // Get all competitions
+        const allCompetitions = (await kv.get('competitions')) || [];
+        console.log(`[Rating] Total competitions in database: ${allCompetitions.length}`);
+        
+        // Log all competitions for debugging
+        allCompetitions.forEach((comp: any) => {
+            console.log(`[Rating] Competition: ${comp.name}, Status: ${comp.status}, Level: ${comp.level}, Participants: ${comp.participants?.length || 0}`);
+        });
+        
+        // Filter for completed competitions with level "Відбіркові" or "Відбіркові CACT"
+        const qualifyingCompetitions = allCompetitions.filter((comp: any) => 
+            comp.status === 'completed' && 
+            (comp.level === 'Відбіркові' || comp.level === 'Відбіркові CACT')
+        );
+        
+        console.log(`[Rating] Found ${qualifyingCompetitions.length} qualifying competitions for ${discipline}`);
+        
+        // Collect all results grouped by participant (userId + dogId)
+        const participantResults: Map<string, {
+            userId: string;
+            dogId: string;
+            userName: string;
+            dogName: string;
+            team: string;
+            scores: number[];
+        }> = new Map();
+        
+        for (const comp of qualifyingCompetitions) {
+            if (!comp.participants) continue;
+            
+            console.log(`[Rating] Processing competition: ${comp.name}, Participants: ${comp.participants.length}`);
+            
+            for (const participant of comp.participants) {
+                console.log(`[Rating] Participant: userId=${participant.userId}, dogId=${participant.dogId}, category=${participant.category}, class=${participant.class}, status=${participant.status}, total=${participant.results?.total}`);
+                
+                // Filter by discipline - check 'class' field which is the source of truth
+                // Normalize for comparison: lowercase
+                // NOTE: We do NOT replace V with B because RH-FL-V is a different class than RH-FL-B
+                const participantClass = (participant.class || '').toLowerCase();
+                const targetDiscipline = discipline.toLowerCase();
+                
+                if (participantClass !== targetDiscipline) {
+                    console.log(`[Rating] Skipping - discipline mismatch (looking for ${targetDiscipline}, got class=${participant.class} normalized to ${participantClass})`);
+                    continue;
+                }
+                
+                // Only confirmed participants with results
+                if (participant.status !== 'confirmed' || !participant.results?.total) {
+                    console.log(`[Rating] Skipping - status=${participant.status}, has total=${!!participant.results?.total}`);
+                    continue;
+                }
+                
+                const key = `${participant.userId}:${participant.dogId}`;
+                
+                if (!participantResults.has(key)) {
+                    // Fetch user profile and dog data for this participant
+                    const participantProfile = await getProfile(participant.userId);
+                    const userDogs = (await kv.get(`dogs:${participant.userId}`)) || [];
+                    const dog = userDogs.find((d: any) => d.id === participant.dogId);
+                    
+                    participantResults.set(key, {
+                        userId: participant.userId,
+                        dogId: participant.dogId,
+                        userName: participantProfile.name || 'Невідомий учасник',
+                        dogName: dog?.name || 'Невідома собака',
+                        team: participantProfile.team || 'Без команди',
+                        scores: []
+                    });
+                }
+                
+                console.log(`[Rating] Adding score ${participant.results.total} for participant ${key}`);
+                participantResults.get(key)!.scores.push(participant.results.total);
+            }
+        }
+        
+        // Calculate rating: sum of top 2 scores for each participant
+        const ratingList = Array.from(participantResults.values()).map(participant => {
+            // Sort scores descending and take top 2
+            const topScores = [...participant.scores].sort((a, b) => b - a).slice(0, 2);
+            const totalScore = topScores.reduce((sum, score) => sum + score, 0);
+            
+            return {
+                userId: participant.userId,
+                dogId: participant.dogId,
+                athlete: participant.userName,
+                dog: participant.dogName,
+                team: participant.team,
+                score: totalScore,
+                competitions: participant.scores.length
+            };
+        });
+        
+        // Sort by score descending
+        ratingList.sort((a, b) => b.score - a.score);
+        
+        // Add places
+        const ratingWithPlaces = ratingList.map((item, index) => ({
+            ...item,
+            place: index + 1
+        }));
+        
+        console.log(`[Rating] Generated rating with ${ratingWithPlaces.length} participants for ${discipline}`);
+        
+        return c.json(ratingWithPlaces);
+    } catch (e) {
+        console.error('[Rating] Error generating rating:', e);
+        return c.json({ error: 'Failed to generate rating' }, 500);
+    }
 });
 
 Deno.serve(app.fetch);

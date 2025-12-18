@@ -1,6 +1,8 @@
 import { PageType } from '../App';
 import { UserProfile } from '../types';
 import { Trophy, Home, Scale, Users, FileText, Medal, BarChart3, Menu, Shield } from 'lucide-react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
+import logo from 'figma:asset/369da5dbacae8c0f58b86860e229dbcb695eb5fa.png';
 
 type HeaderProps = {
   isLoggedIn: boolean;
@@ -44,20 +46,21 @@ export default function Header({
       ];
 
   return (
-    <header className="bg-[rgba(15,23,42,0.8)] backdrop-blur-[20px] border-b border-[rgba(99,102,241,0.2)] py-4 sticky top-0 z-[100]">
+    <header className="bg-white border-b border-gray-200 py-4 sticky top-0 z-[100]">
       <div className="max-w-[1400px] mx-auto px-6 flex justify-between items-center">
         <div
           className="flex items-center gap-3 cursor-pointer"
           onClick={onHomeClick}
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-[10px] flex items-center justify-center shadow-[0_4px_20px_rgba(99,102,241,0.4)]">
-            <Trophy className="w-5 h-5 text-white" />
-          </div>
-          <span className="text-white">SAR Ukraine</span>
+          <ImageWithFallback 
+            src={logo}
+            alt="SAR Ukraine Logo"
+            className="w-10 h-10 rounded-[10px] object-cover"
+          />
         </div>
 
         <button
-          className="md:hidden bg-none border-none text-white cursor-pointer p-2"
+          className="md:hidden bg-none border-none text-gray-900 cursor-pointer p-2"
           onClick={onToggleMobileMenu}
         >
           <Menu className="w-6 h-6" />
@@ -70,8 +73,8 @@ export default function Header({
               className={`px-[18px] py-[10px] rounded-lg cursor-pointer transition-all duration-300 flex items-center gap-2 border-none relative
                 ${
                   currentPage === item.page
-                    ? 'bg-gradient-to-br from-indigo-500 to-purple-600 text-white shadow-[0_4px_15px_rgba(99,102,241,0.4)]'
-                    : 'bg-transparent text-slate-400 hover:text-white hover:bg-[rgba(99,102,241,0.1)]'
+                    ? 'bg-blue-50 text-[#007AFF] after:absolute after:bottom-0 after:left-0 after:right-0 after:h-[2px] after:bg-[#007AFF]'
+                    : 'bg-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                 }`}
               onClick={() => onPageChange(item.page)}
             >
@@ -83,7 +86,7 @@ export default function Header({
         <div className="hidden md:flex gap-3 items-center">
           {isLoggedIn ? (
             <button
-              className="px-6 py-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:translate-y-[-2px] hover:shadow-[0_6px_25px_rgba(99,102,241,0.5)]"
+              className="px-6 py-[10px] bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-lg cursor-pointer transition-all duration-300"
               onClick={onLogout}
             >
               Вийти
@@ -91,13 +94,13 @@ export default function Header({
           ) : (
             <>
               <button
-                className="px-6 py-[10px] bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-lg cursor-pointer transition-all duration-300 shadow-[0_4px_15px_rgba(99,102,241,0.3)] hover:translate-y-[-2px] hover:shadow-[0_6px_25px_rgba(99,102,241,0.5)]"
+                className="px-6 py-[10px] bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-lg cursor-pointer transition-all duration-300"
                 onClick={() => onPageChange('login')}
               >
                 Увійти
               </button>
               <button
-                className="px-6 py-[10px] bg-[rgba(255,255,255,0.05)] text-white border-2 border-[rgba(99,102,241,0.3)] rounded-lg cursor-pointer transition-all duration-300 backdrop-blur-[10px] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)] hover:translate-y-[-2px]"
+                className="px-6 py-[10px] bg-white hover:bg-gray-100 text-gray-900 border-2 border-gray-300 hover:border-gray-400 rounded-lg cursor-pointer transition-all duration-300"
                 onClick={() => onPageChange('register')}
               >
                 Реєстрація

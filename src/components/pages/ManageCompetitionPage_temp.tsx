@@ -134,7 +134,7 @@ const downloadProtocolDOCX = async () => {
         
         sections.push(
             new Paragraph({
-                text: `Місце: ${competition?.location || ''}`,
+                text: `Місце проведення: ${competition?.location || ''}`,
                 spacing: { after: 400 },
             })
         );

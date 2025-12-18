@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
-import { FileText, Download, Plus, Trash2, Calendar, Edit2, Upload } from 'lucide-react';
+import { FileText, Upload, Trash2, Download, Eye, EyeOff, X, Plus, Edit2, Calendar } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { UserProfile } from '../../types';
 import { supabase } from '../../utils/supabase/client';
-import { projectId } from '../../utils/supabase/info';
+import { supabaseUrl } from '../../utils/supabase/info';
 import {
     Dialog,
     DialogContent,
@@ -30,6 +30,9 @@ type Document = {
   fileName?: string;
   date: string;
   description?: string;
+  title?: string;
+  category?: string;
+  uploadedAt?: string;
 };
 
 export default function DocumentsPage({ userProfile, showToast }: DocumentsPageProps) {
@@ -41,7 +44,9 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
   const [isDragging, setIsDragging] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
-    description: ''
+    description: '',
+    category: '',
+    title: ''
   });
 
   useEffect(() => {
@@ -62,13 +67,17 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
     if (editingDocument) {
       setFormData({
         name: editingDocument.name || '',
-        description: editingDocument.description || ''
+        description: editingDocument.description || '',
+        category: editingDocument.category || '',
+        title: editingDocument.title || ''
       });
       setSelectedFile(null);
     } else {
       setFormData({
         name: '',
-        description: ''
+        description: '',
+        category: '',
+        title: ''
       });
       setSelectedFile(null);
     }
@@ -98,7 +107,7 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
   const handleSubmit = async (e: React.FormEvent) => {
       e.preventDefault();
       
-      if (!formData.name.trim()) {
+      if (!formData.title.trim()) {
           showToast('Заповніть обов\'язкові поля: Назва', 'error');
           return;
       }
@@ -130,7 +139,7 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
               uploadFormData.append('file', selectedFile);
 
               const uploadResponse = await fetch(
-                  `https://${projectId}.supabase.co/functions/v1/make-server-5f926218/documents/upload`,
+                  `${supabaseUrl}/functions/v1/make-server-5f926218/documents/upload`,
                   {
                       method: 'POST',
                       headers: {
@@ -196,180 +205,181 @@ export default function DocumentsPage({ userProfile, showToast }: DocumentsPageP
       }
   };
 
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if (e.target.files && e.target.files[0]) {
+          setSelectedFile(e.target.files[0]);
+      }
+  };
+
   const isAdmin = userProfile?.role === 'admin';
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-[60px]">
-      <div className="flex justify-between items-end mb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-8 sm:mb-12 gap-4">
         <div>
-            <h1 className="text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
             Документи
-            </h1>
-            <p className="text-lg text-slate-400">Положення, регламенти та інші важливі документи</p>
+          </h1>
+          <p className="text-base sm:text-lg text-gray-600">Регламенти, положення та інші офіційні документи</p>
         </div>
-        {isAdmin && (
-            <button onClick={openAddModal} className="px-4 py-2 bg-indigo-600 rounded-lg text-white flex gap-2 items-center hover:bg-indigo-500 transition-colors"><Plus size={20} /> Додати</button>
+        {userProfile?.role === 'admin' && (
+          <Button onClick={openAddModal} className="w-full sm:w-auto px-6 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl gap-2 h-auto text-[16px] font-bold font-normal">
+            <Plus size={20} /> Завантажити документ
+          </Button>
         )}
       </div>
-
+      
       {documents.length === 0 ? (
-           <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-[100px_40px] text-center">
-                <FileText className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-                <p className="text-lg text-slate-500">Немає доступних документів</p>
-           </div>
-       ) : (
+        <div className="bg-white shadow-sm rounded-[20px] p-[100px_40px] text-center">
+            <FileText className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+            <p className="text-lg text-gray-500">Немає доданих документів</p>
+        </div>
+      ) : (
         <div className="grid gap-4">
-            {documents.map((doc) => (
-            <div
+            {documents.map(doc => (
+              <div
                 key={doc.id}
-                className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all duration-300 hover:border-[rgba(99,102,241,0.5)] hover:shadow-[0_0_30px_rgba(99,102,241,0.15)]"
-            >
-                <div className="flex items-start gap-4 flex-1">
-                <FileText className="w-6 h-6 text-indigo-300 flex-shrink-0 mt-1" />
-                <div className="flex-1">
-                    <div className="text-xl text-white mb-1">{doc.name}</div>
-                    {doc.description && (
-                        <p className="text-base text-slate-400 mb-2">{doc.description}</p>
-                    )}
-                    <div className="flex items-center gap-4 text-sm text-slate-500">
-                        <div className="flex items-center gap-2">
-                            <Calendar size={14} /> {doc.date}
-                        </div>
-                        {doc.fileName && (
-                            <div className="flex items-center gap-1">
-                                <FileText size={14} />
-                                <span className="text-sm">{doc.fileName}</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-                </div>
-
-                <div className="flex items-center gap-3 w-full md:w-auto">
-                    <button
-                    className="flex-1 md:flex-none px-6 py-[10px] bg-transparent text-indigo-300 border border-indigo-500/30 rounded-[10px] cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 whitespace-nowrap hover:bg-[rgba(99,102,241,0.1)] hover:text-indigo-200"
-                    onClick={() => handleDownload(doc.id)}
-                    >
-                    <Download className="w-4 h-4" /> Завантажити
-                    </button>
-                    {isAdmin && (
-                        <div className="flex gap-2">
-                            <button 
-                                onClick={() => openEditModal(doc)} 
-                                className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
-                                title="Редагувати"
-                            >
-                                <Edit2 size={18} />
-                            </button>
-                            <button 
-                                onClick={() => handleDelete(doc.id)} 
-                                className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                                title="Видалити"
-                            >
-                                <Trash2 size={18} />
-                            </button>
-                        </div>
-                    )}
-                </div>
-            </div>
+                className="bg-white shadow-sm rounded-2xl p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-5 transition-all duration-300 hover:shadow-lg"
+              >
+                  <div className="flex items-start gap-4 flex-1">
+                      <div className="bg-blue-100 p-4 rounded-xl">
+                          <FileText className="w-7 h-7 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                          <h3 className="text-base md:text-xl text-gray-900 mb-2 font-semibold">{doc.title}</h3>
+                          {doc.description && (
+                              <p className="text-base text-gray-600 mb-3 leading-relaxed">{doc.description}</p>
+                          )}
+                          <div className="flex flex-wrap gap-3 text-base">
+                              <span className="bg-blue-100 px-3 py-1 rounded-lg text-blue-700">
+                                  {doc.category}
+                              </span>
+                              <span className="flex items-center gap-1.5 text-gray-500">
+                                  <Calendar size={16} />
+                                  {doc.uploadedAt ? new Date(doc.uploadedAt).toLocaleDateString('uk-UA') : doc.date}
+                              </span>
+                          </div>
+                      </div>
+                  </div>
+                  
+                  <div className="flex gap-2 w-full md:w-auto">
+                      <button
+                          onClick={() => handleDownload(doc.id)}
+                          className="flex-1 md:flex-auto px-6 py-3 bg-gray-100 hover:bg-gray-200 text-gray-700 border-none rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center gap-2 text-base"
+                      >
+                          <Download size={18} /> Завантажити
+                      </button>
+                      {userProfile?.role === 'admin' && (
+                          <>
+                              <button
+                                  onClick={() => openEditModal(doc)}
+                                  className="px-4 py-3 bg-blue-100 hover:bg-blue-200 text-blue-700 border-none rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center"
+                              >
+                                  <Edit2 size={18} />
+                              </button>
+                              <button
+                                  onClick={() => handleDelete(doc.id)}
+                                  className="px-4 py-3 bg-red-100 hover:bg-red-200 text-red-700 border-none rounded-xl cursor-pointer transition-all duration-300 flex items-center justify-center"
+                              >
+                                  <Trash2 size={18} />
+                              </button>
+                          </>
+                      )}
+                  </div>
+              </div>
             ))}
         </div>
-       )}
-       
+      )}
+
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] text-white">
+        <DialogContent className="sm:max-w-[600px] bg-white shadow-xl text-gray-900">
           <DialogHeader>
-            <DialogTitle className="text-2xl bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
-              {editingDocument ? 'Редагування документу' : 'Додати документ'}
+            <DialogTitle className="text-xl font-semibold">
+              {editingDocument ? 'Редагувати документ' : 'Завантажити новий документ'}
             </DialogTitle>
-            <DialogDescription className="text-sm text-slate-400">
-              {editingDocument ? 'Оновіть інформацію про документ' : 'Додайте новий документ до бази'}
+            <DialogDescription className="text-gray-600">
+              {editingDocument ? 'Оновіть дані про документ' : 'Заповніть дані про документ та завантажте файл'}
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-5 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-200 text-base">
-                  Назва документу <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Положення про змагання"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="description" className="text-gray-200 text-base">
-                  Опис (опціонально)
-                </Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 min-h-[100px]" 
-                  placeholder="Короткий опис документу"
-                />
-              </div>
-              {!editingDocument && (
-                <div className="space-y-2">
-                  <Label htmlFor="file" className="text-gray-200 text-base">
-                    Файл <span className="text-red-400">*</span>
-                  </Label>
-                  <div 
-                    className="relative border-2 border-dashed border-[rgba(99,102,241,0.4)] rounded-xl p-8 text-center bg-[rgba(15,23,42,0.3)] hover:border-[rgba(99,102,241,0.6)] hover:bg-[rgba(99,102,241,0.05)] transition-all cursor-pointer"
-                    onClick={() => document.getElementById('file-input')?.click()}
-                    onDragEnter={() => setIsDragging(true)}
-                    onDragLeave={() => setIsDragging(false)}
-                    onDragOver={(e) => e.preventDefault()}
-                    onDrop={(e) => {
-                        e.preventDefault();
-                        const file = e.dataTransfer.files[0];
-                        if (file) {
-                            setSelectedFile(file);
-                        }
-                        setIsDragging(false);
-                    }}
-                  >
-                    <input
-                      id="file-input"
-                      type="file"
-                      onChange={(e) => setSelectedFile(e.target.files ? e.target.files[0] : null)}
-                      className="hidden"
-                      required
-                    />
-                    <Upload className="w-8 h-8 mx-auto mb-3 text-indigo-400" />
-                    <p className="text-base text-slate-300 mb-1">
-                      {selectedFile ? selectedFile.name : 'Завантажити файли'}
-                    </p>
-                    <p className="text-sm text-slate-500">
-                      {selectedFile ? `${(selectedFile.size / 1024).toFixed(2)} KB` : 'Клікніть або перетягніть файл сюди'}
-                    </p>
-                  </div>
-                </div>
-              )}
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="title" className="text-gray-900 font-medium">Назва документа</Label>
+              <Input
+                id="title"
+                value={formData.title}
+                onChange={(e) => setFormData({...formData, title: e.target.value})}
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                required
+              />
             </div>
-            <DialogFooter className="gap-3 mt-6">
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                disabled={isUploading}
-                className="bg-[rgba(255,255,255,0.05)] text-white border border-[rgba(99,102,241,0.3)] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)]"
+            <div className="grid gap-2">
+              <Label htmlFor="category" className="text-gray-900 font-medium">Категорія</Label>
+              <select
+                id="category"
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base cursor-pointer"
+                required
               >
-                Скасувати
-              </Button>
-              <Button 
-                type="submit"
-                disabled={isUploading}
-                className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)]"
-              >
-                {isUploading ? 'Завантаження...' : (editingDocument ? 'Оновити' : 'Додати')}
-              </Button>
-            </DialogFooter>
-          </form>
+                <option value="">Оберіть категорію</option>
+                <option value="Положення">Положення</option>
+                <option value="Регламент">Регламент</option>
+                <option value="Інструкція">Інструкція</option>
+                <option value="Форма">Форма</option>
+                <option value="Інше">Інше</option>
+              </select>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-gray-900 font-medium">Опис (опціонально)</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Короткий опис документа"
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="file" className="text-gray-900 font-medium">
+                Файл {editingDocument && '(залиште порожнім, щоб не змінювати)'}
+              </Label>
+              <div className="relative">
+                <input 
+                  type="file" 
+                  id="file"
+                  onChange={handleFileChange}
+                  className="hidden"
+                  accept=".pdf,.doc,.docx,.xls,.xlsx"
+                />
+                <label 
+                  htmlFor="file"
+                  className="flex items-center justify-center gap-2 w-full p-4 bg-white border-2 border-dashed border-gray-300 hover:border-[#007AFF] rounded-xl cursor-pointer transition-all text-gray-700 hover:text-gray-900 text-base"
+                >
+                  <Upload size={20} />
+                  {selectedFile ? selectedFile.name : editingDocument ? 'Оберіть новий файл (опціонально)' : 'Оберіть файл'}
+                </label>
+              </div>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsModalOpen(false)} 
+              disabled={isUploading}
+              className="border-gray-300 text-gray-700 hover:bg-gray-100"
+            >
+              Скасувати
+            </Button>
+            <Button 
+              onClick={handleSubmit} 
+              disabled={isUploading || (!editingDocument && !selectedFile)}
+              className="bg-[#007AFF] hover:bg-[#0066CC] text-white"
+            >
+              {isUploading ? 'Завантаження...' : editingDocument ? 'Оновити' : 'Завантажити'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

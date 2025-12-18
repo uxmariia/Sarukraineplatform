@@ -10,6 +10,8 @@ type CompetitionModalProps = {
   editingComp?: Competition;
 };
 
+const inputClassName = "w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base";
+
 export default function CompetitionModal({ isOpen, onClose, onSave, editingComp }: CompetitionModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -21,7 +23,8 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
     description: '',
     maxParticipants: 20,
     organizerName: '',
-    judges: [] as string[]
+    judges: [] as string[],
+    status: 'planned' as string
   });
 
   const [availableJudges, setAvailableJudges] = useState<any[]>([]);
@@ -51,7 +54,8 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
         description: editingComp.description,
         maxParticipants: editingComp.maxParticipants,
         organizerName: editingComp.organizerName || '',
-        judges: editingComp.judges || []
+        judges: editingComp.judges || [],
+        status: editingComp.status || 'planned'
       });
     } else {
       setFormData({
@@ -64,14 +68,19 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
         description: '',
         maxParticipants: 20,
         organizerName: '',
-        judges: []
+        judges: [],
+        status: 'planned'
       });
     }
   }, [editingComp, isOpen]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const categoriesArray = formData.categories.split(',').map(s => s.trim()).filter(Boolean);
+    // Normalize categories: lowercase and replace V with B
+    const categoriesArray = formData.categories
+      .split(',')
+      .map(s => s.trim().toLowerCase().replace(/v/g, 'b'))
+      .filter(Boolean);
     onSave({
         ...formData,
         categories: categoriesArray,
@@ -91,14 +100,14 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-5">
-      <div className="bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] rounded-[20px] max-w-[700px] w-full max-h-[90vh] overflow-y-auto p-[24px] p-[16px]">
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5">
+      <div className="bg-white shadow-xl rounded-[20px] max-w-[700px] w-full max-h-[90vh] overflow-y-auto p-[24px] p-[16px]">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white text-[32px]">
+          <h2 className="text-gray-900 text-[32px] font-semibold">
             {editingComp ? 'Редагувати змагання' : 'Створити змагання'}
           </h2>
           <button
-            className="bg-none border-none text-slate-400 cursor-pointer p-0 w-8 h-8 flex items-center justify-center transition-all duration-300 hover:text-white"
+            className="bg-none border-none text-gray-600 cursor-pointer p-0 w-8 h-8 flex items-center justify-center transition-all duration-300 hover:text-gray-900"
             onClick={onClose}
           >
             <X className="w-6 h-6" />
@@ -108,20 +117,20 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
         <form onSubmit={handleSubmit}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mb-5">
             <div>
-                <label className="block text-base text-gray-200 mb-2">Назва змагань</label>
+                <label className="block text-base text-gray-900 mb-2 font-medium">Назва змагань</label>
                 <input
                 type="text"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                className={inputClassName}
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 required
                 />
             </div>
             <div>
-                 <label className="block text-base text-gray-200 mb-2">Організатор (Назва)</label>
+                 <label className="block text-base text-gray-900 mb-2 font-medium">Організатор (Назва)</label>
                  <input
                   type="text"
-                  className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                  className={inputClassName}
                   value={formData.organizerName}
                   onChange={(e) => setFormData({ ...formData, organizerName: e.target.value })}
                   placeholder="Наприклад: КСУ, ГО 'SAR'"
@@ -132,20 +141,20 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
 
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
-                <label className="block text-base text-gray-200 mb-2">Дата початку</label>
+                <label className="block text-base text-gray-900 mb-2 font-medium">Дата початку</label>
                 <input
                 type="date"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                className={inputClassName}
                 value={formData.startDate}
                 onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                 required
                 />
             </div>
              <div>
-                <label className="block text-base text-gray-200 mb-2">Дата завершення</label>
+                <label className="block text-base text-gray-900 mb-2 font-medium">Дата завершення</label>
                 <input
                 type="date"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                className={inputClassName}
                 value={formData.endDate}
                 onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
                 />
@@ -153,10 +162,10 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
           </div>
 
            <div className="mb-5">
-                <label className="block text-base text-gray-200 mb-2">Місце проведення</label>
+                <label className="block text-base text-gray-900 mb-2 font-medium">Місце проведення</label>
                 <input
                 type="text"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                className={inputClassName}
                 value={formData.location}
                 onChange={(e) => setFormData({ ...formData, location: e.target.value })}
                 required
@@ -165,61 +174,83 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
 
           <div className="grid grid-cols-2 gap-4 mb-5">
             <div>
-                <label className="block text-base text-gray-200 mb-2">Рівень (Напр: A, B, Відбір)</label>
-                <input
-                type="text"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
-                value={formData.level}
-                onChange={(e) => setFormData({ ...formData, level: e.target.value })}
-                required
-                />
+                <label className="block text-base text-gray-900 mb-2 font-medium">Рівень змагань</label>
+                <select
+                  className={inputClassName}
+                  value={formData.level}
+                  onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                  required
+                >
+                  <option value="" disabled className="bg-white">Оберіть рівень</option>
+                  <option value="Національні змагання" className="bg-white">Національні змагання</option>
+                  <option value="Міжнародні змагання" className="bg-white">Міжнародні змагання</option>
+                  <option value="Випробування" className="bg-white">Випробування</option>
+                  <option value="Відбіркові" className="bg-white">Відбіркові</option>
+                  <option value="CACT" className="bg-white">CACT</option>
+                  <option value="Відбіркові CACT" className="bg-white">Відбіркові CACT</option>
+                </select>
             </div>
              <div>
-                <label className="block text-base text-gray-200 mb-2">Категорії (через кому)</label>
+                <label className="block text-base text-gray-900 mb-2 font-medium">Категорії (через кому)</label>
                 <input
                 type="text"
-                className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+                className={inputClassName}
                 value={formData.categories}
                 onChange={(e) => setFormData({ ...formData, categories: e.target.value })}
-                placeholder="RH-FL, RH-T, etc."
+                placeholder="rh-fl-b, rh-t-b, rh-f-b"
                 required
                 />
             </div>
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Макс. учасників</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Макс. учасників</label>
             <input
             type="number"
-            className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+            className={inputClassName}
             value={formData.maxParticipants}
             onChange={(e) => setFormData({ ...formData, maxParticipants: parseInt(e.target.value) })}
             required
             />
           </div>
 
+          <div className="mb-5">
+            <label className="block text-base text-gray-900 mb-2 font-medium">Статус змагань</label>
+            <select
+              className={inputClassName}
+              value={formData.status}
+              onChange={(e) => setFormData({ ...formData, status: e.target.value })}
+              required
+            >
+              <option value="planned" className="bg-white">Реєстрація скоро відкриється</option>
+              <option value="registration_open" className="bg-white">Йде реєстрація</option>
+              <option value="registration_closed" className="bg-white">Реєстрація завершена</option>
+              <option value="completed" className="bg-white">Завершені</option>
+            </select>
+          </div>
+
            <div className="mb-5">
-             <label className="block text-base text-gray-200 mb-2">Судді</label>
-             <div className="flex flex-wrap gap-2 bg-[rgba(15,23,42,0.5)] p-3 rounded-[10px] border border-[rgba(99,102,241,0.3)]">
+             <label className="block text-base text-gray-900 mb-2 font-medium">Судді</label>
+             <div className="flex flex-wrap gap-2 bg-gray-50 p-3 rounded-[10px] border border-gray-300">
                  {availableJudges.map(judge => (
-                     <label key={judge.id} className="flex items-center gap-2 cursor-pointer text-slate-300 hover:text-white transition-colors text-base">
+                     <label key={judge.id} className="flex items-center gap-2 cursor-pointer text-gray-700 hover:text-gray-900 transition-colors text-base">
                          <input 
                             type="checkbox" 
                             checked={formData.judges.includes(judge.name)}
                             onChange={() => handleJudgeChange(judge.name)}
-                            className="accent-indigo-500 w-4 h-4"
+                            className="accent-[#007AFF] w-4 h-4"
                          />
                          {judge.name}
                      </label>
                  ))}
-                 {availableJudges.length === 0 && <span className="text-slate-500 text-sm">Суддів не знайдено. Додайте їх у розділі "Судді".</span>}
+                 {availableJudges.length === 0 && <span className="text-gray-500 text-sm">Суддів не знайдено. Додайте їх у розділі "Судді".</span>}
              </div>
            </div>
 
            <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Опис</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Опис</label>
             <textarea
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] min-h-[100px] text-base"
+              className={`${inputClassName} min-h-[100px]`}
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
             />
@@ -227,7 +258,7 @@ export default function CompetitionModal({ isOpen, onClose, onSave, editingComp 
 
           <button
             type="submit"
-            className="w-full px-4 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] text-base"
+            className="w-full px-4 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 text-base"
           >
             Зберегти
           </button>

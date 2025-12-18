@@ -9,6 +9,8 @@ type DogModalProps = {
   editingDog?: Dog;
 };
 
+const inputClassName = "w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 focus:outline-none focus:border-[#007AFF] text-base";
+
 export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogModalProps) {
   const [formData, setFormData] = useState({
     name: '',
@@ -53,14 +55,14 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/80 z-[200] flex items-center justify-center p-5">
-      <div className="bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] rounded-[20px] p-8 max-w-[600px] w-full max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/50 z-[200] flex items-center justify-center p-5">
+      <div className="bg-white shadow-xl rounded-[20px] p-8 max-w-[600px] w-full max-h-[90vh] overflow-y-auto">
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-white">
+          <h2 className="text-gray-900 font-semibold">
             {editingDog ? 'Редагувати собаку' : 'Додати собаку'}
           </h2>
           <button
-            className="bg-none border-none text-slate-400 cursor-pointer p-0 w-8 h-8 flex items-center justify-center transition-all duration-300 hover:text-white"
+            className="bg-none border-none text-gray-600 cursor-pointer p-0 w-8 h-8 flex items-center justify-center transition-all duration-300 hover:text-gray-900"
             onClick={onClose}
           >
             <X className="w-6 h-6" />
@@ -69,10 +71,10 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
 
         <form onSubmit={handleSubmit}>
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Кличка за родоводом</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Кличка за родоводом</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               required
@@ -80,10 +82,10 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Дата народження</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Дата народження</label>
             <input
               type="date"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.birth}
               onChange={(e) => setFormData({ ...formData, birth: e.target.value })}
               required
@@ -91,9 +93,9 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Стать собаки</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Стать собаки</label>
             <select
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.gender}
               onChange={(e) => setFormData({ ...formData, gender: e.target.value as 'male' | 'female' })}
               required
@@ -105,20 +107,20 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Порода</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Порода</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.breed || ''}
               onChange={(e) => setFormData({ ...formData, breed: e.target.value })}
             />
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Номер родоводу</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Номер родоводу</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.pedigree}
               onChange={(e) => setFormData({ ...formData, pedigree: e.target.value })}
               required
@@ -126,10 +128,10 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Номер чіпу/клейма</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Номер чіпу/клейма</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.chip}
               onChange={(e) => setFormData({ ...formData, chip: e.target.value })}
               required
@@ -137,10 +139,10 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
           </div>
 
           <div className="mb-5">
-            <label className="block text-base text-gray-200 mb-2">Номер робочої книжки</label>
+            <label className="block text-base text-gray-900 mb-2 font-medium">Номер робочої книжки</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)] text-base"
+              className={inputClassName}
               value={formData.workbook}
               onChange={(e) => setFormData({ ...formData, workbook: e.target.value })}
             />
@@ -148,7 +150,7 @@ export default function DogModal({ isOpen, onClose, onSave, editingDog }: DogMod
 
           <button
             type="submit"
-            className="w-full px-4 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] text-base"
+            className="w-full px-4 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 text-base"
           >
             Зберегти
           </button>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users, Plus, Trash2, MapPin, Edit2, Phone, User } from 'lucide-react';
+import { Users, Plus, Trash2, MapPin, Edit2, Phone, User, Mail } from 'lucide-react';
 import { apiRequest } from '../../utils/api';
 import { UserProfile } from '../../types';
 import {
@@ -23,8 +23,10 @@ type Team = {
   id: string;
   name: string;
   city: string;
-  contactName?: string;
-  contactPhone?: string;
+  contactPerson?: string;
+  phone?: string;
+  description?: string;
+  email?: string;
 };
 
 export default function TeamsPage({ userProfile, showToast }: TeamsPageProps) {
@@ -34,8 +36,10 @@ export default function TeamsPage({ userProfile, showToast }: TeamsPageProps) {
   const [formData, setFormData] = useState({
     name: '',
     city: '',
-    contactName: '',
-    contactPhone: ''
+    contactPerson: '',
+    phone: '',
+    description: '',
+    email: ''
   });
 
   useEffect(() => {
@@ -60,15 +64,19 @@ export default function TeamsPage({ userProfile, showToast }: TeamsPageProps) {
       setFormData({
         name: editingTeam.name || '',
         city: editingTeam.city || '',
-        contactName: editingTeam.contactName || '',
-        contactPhone: editingTeam.contactPhone || ''
+        contactPerson: editingTeam.contactPerson || '',
+        phone: editingTeam.phone || '',
+        description: editingTeam.description || '',
+        email: editingTeam.email || ''
       });
     } else {
       setFormData({
         name: '',
         city: '',
-        contactName: '',
-        contactPhone: ''
+        contactPerson: '',
+        phone: '',
+        description: '',
+        email: ''
       });
     }
   }, [editingTeam, isModalOpen]);
@@ -94,9 +102,7 @@ export default function TeamsPage({ userProfile, showToast }: TeamsPageProps) {
       setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-      e.preventDefault();
-      
+  const handleSave = async () => {
       if (!formData.name.trim() || !formData.city.trim()) {
           showToast?.('Заповніть обов\'язкові поля: Назва, Місто', 'error');
           return;
@@ -124,154 +130,164 @@ export default function TeamsPage({ userProfile, showToast }: TeamsPageProps) {
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-[60px]">
-      <div className="flex justify-between items-end mb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-4">
         <div>
-            <h1 className="text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+          <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
             Команди
-            </h1>
-            <p className="text-lg text-slate-400">Знайдіть команди з пошуково-рятувальної кінології</p>
+          </h1>
+          <p className="text-lg text-gray-600">Реєстр команд пошуково-рятувальних собак</p>
         </div>
-        {isAdmin && (
-            <button onClick={openAddModal} className="px-4 py-2 bg-indigo-600 rounded-lg text-white flex gap-2 items-center hover:bg-indigo-500 transition-colors"><Plus size={20} /> Додати</button>
+        {userProfile?.role === 'admin' && (
+            <Button onClick={openAddModal} className="w-full sm:w-auto px-6 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl gap-2 h-auto text-[16px] font-bold font-normal">
+                <Plus size={20} /> Додати команду
+            </Button>
         )}
       </div>
 
       {teams.length === 0 ? (
-        <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-[100px_40px] text-center">
-            <Users className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-            <p className="text-lg text-slate-500">Немає доступних даних про команди</p>
+        <div className="bg-white shadow-sm rounded-[20px] p-[100px_40px] text-center">
+            <Users className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+            <p className="text-lg text-gray-500">Немає доданих команд</p>
         </div>
       ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {teams.map(team => (
-                  <div key={team.id} className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-6 hover:border-indigo-500/50 transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.15)]">
+                  <div key={team.id} className="bg-white shadow-sm rounded-2xl p-6 hover:shadow-lg transition-all">
                       <div className="flex justify-between items-start mb-4">
-                          <h3 className="text-2xl text-white">{team.name}</h3>
-                          {isAdmin && (
+                          <div className="flex-1">
+                              <h3 className="text-xl text-gray-900 mb-1 font-semibold">{team.name}</h3>
+                              {team.city && <p className="text-base text-gray-600">{team.city}</p>}
+                          </div>
+                          {userProfile?.role === 'admin' && (
                               <div className="flex gap-2">
-                                  <button 
-                                      onClick={() => openEditModal(team)} 
-                                      className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
-                                      title="Редагувати"
+                                  <button
+                                      onClick={() => openEditModal(team)}
+                                      className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 border-none rounded-lg cursor-pointer transition-all"
                                   >
-                                      <Edit2 size={18} />
+                                      <Edit2 size={16} />
                                   </button>
-                                  <button 
-                                      onClick={() => handleDelete(team.id)} 
-                                      className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                                      title="Видалити"
+                                  <button
+                                      onClick={() => handleDelete(team.id)}
+                                      className="p-2 bg-red-100 text-red-700 hover:bg-red-200 border-none rounded-lg cursor-pointer transition-all"
                                   >
-                                      <Trash2 size={18} />
+                                      <Trash2 size={16} />
                                   </button>
                               </div>
                           )}
                       </div>
-                      <div className="space-y-3">
-                          <p className="flex items-center gap-2 text-slate-400">
-                              <MapPin size={16} className="text-indigo-400" />
-                              <span className="text-base">{team.city}</span>
-                          </p>
-                          {team.contactName && (
-                              <p className="flex items-center gap-2 text-slate-400">
-                                  <User size={16} className="text-indigo-400" />
-                                  <span className="text-base">{team.contactName}</span>
-                              </p>
+                      
+                      {team.description && (
+                          <p className="text-base text-gray-600 mb-3 leading-relaxed">{team.description}</p>
+                      )}
+
+                      <div className="space-y-2 text-gray-600 text-base">
+                          {team.contactPerson && (
+                              <div className="flex items-center gap-2">
+                                  <Users size={16} className="text-gray-400 flex-shrink-0" />
+                                  <span>{team.contactPerson}</span>
+                              </div>
                           )}
-                          {team.contactPhone && (
-                              <a 
-                                  href={`tel:${team.contactPhone}`}
-                                  className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors w-fit"
-                              >
-                                  <Phone size={16} className="text-indigo-400" />
-                                  <span className="text-base">{team.contactPhone}</span>
-                              </a>
+                          {team.phone && (
+                              <div className="flex items-center gap-2">
+                                  <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                                  <a href={`tel:${team.phone}`} className="text-[#007AFF] hover:text-[#0066CC] no-underline">
+                                      {team.phone}
+                                  </a>
+                              </div>
+                          )}
+                          {team.email && (
+                              <div className="flex items-center gap-2">
+                                  <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                                  <a href={`mailto:${team.email}`} className="text-[#007AFF] hover:text-[#0066CC] no-underline break-all">
+                                      {team.email}
+                                  </a>
+                              </div>
                           )}
                       </div>
                   </div>
               ))}
-          </div>
+        </div>
       )}
+
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="sm:max-w-[600px] bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] text-white">
+        <DialogContent className="sm:max-w-[600px] bg-white shadow-xl text-gray-900">
           <DialogHeader>
-            <DialogTitle className="text-2xl bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
-              {editingTeam ? 'Редагування команди' : 'Додати команду'}
-            </DialogTitle>
-            <DialogDescription className="text-sm text-slate-400">
-              {editingTeam ? 'Оновіть інформацію про команду' : 'Додайте нову команду'}
+            <DialogTitle className="text-xl font-semibold">{editingTeam ? 'Редагувати команду' : 'Додати команду'}</DialogTitle>
+            <DialogDescription className="text-gray-600">
+              Заповніть дані команди для бази
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleSubmit}>
-            <div className="grid gap-5 py-4">
-              <div className="space-y-2">
-                <Label htmlFor="name" className="text-gray-200 text-base">
-                  Назва команди <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Назва команди"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="city" className="text-gray-200 text-base">
-                  Місто <span className="text-red-400">*</span>
-                </Label>
-                <Input
-                  id="city"
-                  value={formData.city}
-                  onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Київ"
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactName" className="text-gray-200 text-base">
-                  Контактна особа (ім'я)
-                </Label>
-                <Input
-                  id="contactName"
-                  value={formData.contactName}
-                  onChange={(e) => setFormData({ ...formData, contactName: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="Іванов Іван"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="contactPhone" className="text-gray-200 text-base">
-                  Телефон контактної особи
-                </Label>
-                <Input
-                  id="contactPhone"
-                  type="tel"
-                  value={formData.contactPhone}
-                  onChange={(e) => setFormData({ ...formData, contactPhone: e.target.value })}
-                  className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                  placeholder="+380 XX XXX XX XX"
-                />
-              </div>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="name" className="text-gray-900 font-medium">Назва команди</Label>
+              <Input
+                id="name"
+                value={formData.name}
+                onChange={(e) => setFormData({...formData, name: e.target.value})}
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                required
+              />
             </div>
-            <DialogFooter className="gap-3 mt-6">
-              <Button 
-                type="button" 
-                variant="outline"
-                onClick={() => setIsModalOpen(false)}
-                className="bg-[rgba(255,255,255,0.05)] text-white border border-[rgba(99,102,241,0.3)] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)]"
-              >
-                Скасувати
-              </Button>
-              <Button 
-                type="submit"
-                className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)]"
-              >
-                {editingTeam ? 'Оновити' : 'Додати'}
-              </Button>
-            </DialogFooter>
-          </form>
+            <div className="grid gap-2">
+              <Label htmlFor="city" className="text-gray-900 font-medium">Місто</Label>
+              <Input
+                id="city"
+                value={formData.city}
+                onChange={(e) => setFormData({...formData, city: e.target.value})}
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description" className="text-gray-900 font-medium">Опис</Label>
+              <Input
+                id="description"
+                value={formData.description}
+                onChange={(e) => setFormData({...formData, description: e.target.value})}
+                placeholder="Короткий опис команди"
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="contactPerson" className="text-gray-900 font-medium">Контактна особа</Label>
+              <Input
+                id="contactPerson"
+                value={formData.contactPerson}
+                onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="phone" className="text-gray-900 font-medium">Телефон</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={formData.phone}
+                onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                placeholder="+380"
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email" className="text-gray-900 font-medium">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={formData.email}
+                onChange={(e) => setFormData({...formData, email: e.target.value})}
+                className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+              />
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsModalOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
+              Скасувати
+            </Button>
+            <Button onClick={handleSave} className="bg-[#007AFF] hover:bg-[#0066CC] text-white">
+              {editingTeam ? 'Зберегти' : 'Додати'}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

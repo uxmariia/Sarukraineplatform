@@ -9,6 +9,8 @@ type RegisterPageProps = {
   showToast?: (message: string, type: Toast['type']) => void;
 };
 
+const inputClassName = "w-full px-4 py-[14px] bg-white border border-gray-300 rounded-[10px] text-gray-900 transition-all duration-300 placeholder:text-gray-400 focus:outline-none focus:border-[#007AFF]";
+
 export default function RegisterPage({ onPageChange, showToast }: RegisterPageProps) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -62,18 +64,18 @@ export default function RegisterPage({ onPageChange, showToast }: RegisterPagePr
 
   return (
     <div className="max-w-[480px] mx-auto px-6 py-[60px]">
-      <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-3xl p-12 p-[24px]">
-        <h1 className="text-4xl mb-2 text-center bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+      <div className="bg-white shadow-sm rounded-3xl p-12 p-[24px]">
+        <h1 className="text-4xl mb-2 text-center text-gray-900 font-semibold">
           Реєстрація
         </h1>
-        <p className="text-center text-slate-400 mb-8">Створіть новий обліковий запис</p>
+        <p className="text-center text-gray-600 mb-8">Створіть новий обліковий запис</p>
 
         <form onSubmit={handleSubmit}>
           <div className="mb-5">
-            <label className="block text-sm text-gray-200 mb-2">Ім'я та Прізвище</label>
+            <label className="block text-sm text-gray-900 mb-2 font-medium">Ім'я та Прізвище</label>
             <input
               type="text"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+              className={inputClassName}
               placeholder="Іван Петренко"
               value={name}
               onChange={e => setName(e.target.value)}
@@ -82,10 +84,10 @@ export default function RegisterPage({ onPageChange, showToast }: RegisterPagePr
           </div>
 
           <div className="mb-5">
-            <label className="block text-sm text-gray-200 mb-2">Email</label>
+            <label className="block text-sm text-gray-900 mb-2 font-medium">Email</label>
             <input
               type="email"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+              className={inputClassName}
               placeholder="your@email.com"
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -94,10 +96,10 @@ export default function RegisterPage({ onPageChange, showToast }: RegisterPagePr
           </div>
 
           <div className="mb-5">
-            <label className="block text-sm text-gray-200 mb-2">Пароль</label>
+            <label className="block text-sm text-gray-900 mb-2 font-medium">Пароль</label>
             <input
               type="password"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+              className={inputClassName}
               placeholder="••••••••"
               value={password}
               onChange={e => setPassword(e.target.value)}
@@ -106,10 +108,10 @@ export default function RegisterPage({ onPageChange, showToast }: RegisterPagePr
           </div>
 
           <div className="mb-5">
-            <label className="block text-sm text-gray-200 mb-2">Підтвердження паролю</label>
+            <label className="block text-sm text-gray-900 mb-2 font-medium">Підтвердження паролю</label>
             <input
               type="password"
-              className="w-full px-4 py-[14px] bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] rounded-[10px] text-white transition-all duration-300 placeholder:text-slate-500 focus:outline-none focus:border-indigo-500 focus:shadow-[0_0_0_3px_rgba(99,102,241,0.2)]"
+              className={inputClassName}
               placeholder="••••••••"
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
@@ -120,16 +122,16 @@ export default function RegisterPage({ onPageChange, showToast }: RegisterPagePr
           <button
             type="submit"
             disabled={loading}
-            className="w-full px-4 py-4 bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none rounded-xl cursor-pointer transition-all duration-300 hover:translate-y-[-2px] hover:shadow-[0_8px_25px_rgba(99,102,241,0.5)] disabled:opacity-50"
+            className="w-full px-4 py-4 bg-[#007AFF] hover:bg-[#0066CC] text-white border-none rounded-xl cursor-pointer transition-all duration-300 disabled:opacity-50"
           >
             {loading ? 'Реєстрація...' : 'Зареєструватися'}
           </button>
         </form>
 
-        <div className="text-center mt-6 text-slate-400">
+        <div className="text-center mt-6 text-gray-600">
           Вже є обліковий запис?{' '}
           <button
-            className="text-indigo-300 no-underline cursor-pointer bg-none border-none hover:text-indigo-200"
+            className="text-[#007AFF] no-underline cursor-pointer bg-none border-none hover:text-[#0066CC]"
             onClick={() => onPageChange('login')}
           >
             Увійти

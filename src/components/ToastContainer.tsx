@@ -13,10 +13,10 @@ export default function ToastContainer({ toasts, onRemove }: ToastContainerProps
     info: Info,
   };
 
-  const borderColors = {
-    success: 'border-[rgba(34,197,94,0.5)]',
-    error: 'border-[rgba(239,68,68,0.5)]',
-    info: 'border-[rgba(59,130,246,0.5)]',
+  const styles = {
+    success: 'bg-green-50 border-green-300 text-green-800',
+    error: 'bg-red-50 border-red-300 text-red-800',
+    info: 'bg-blue-50 border-blue-300 text-blue-800',
   };
 
   return (
@@ -26,12 +26,12 @@ export default function ToastContainer({ toasts, onRemove }: ToastContainerProps
         return (
           <div
             key={toast.id}
-            className={`bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border ${borderColors[toast.type]} rounded-xl px-5 py-4 min-w-[300px] max-w-[400px] shadow-[0_10px_40px_rgba(0,0,0,0.5)] animate-[slideInRight_0.3s_ease] flex items-center gap-3`}
+            className={`${styles[toast.type]} border rounded-xl px-5 py-4 min-w-[300px] max-w-[400px] shadow-lg animate-[slideInRight_0.3s_ease] flex items-center gap-3`}
           >
             <IconComponent className="w-5 h-5 flex-shrink-0" />
-            <span className="text-gray-200 flex-1">{toast.message}</span>
+            <span className="flex-1 font-medium">{toast.message}</span>
             <button
-              className="bg-none border-none text-slate-400 cursor-pointer p-0 w-6 h-6 flex items-center justify-center flex-shrink-0 hover:text-white"
+              className="bg-none border-none text-current opacity-60 cursor-pointer p-0 w-6 h-6 flex items-center justify-center flex-shrink-0 hover:opacity-100 transition-opacity"
               onClick={() => onRemove(toast.id)}
             >
               <X className="w-4 h-4" />

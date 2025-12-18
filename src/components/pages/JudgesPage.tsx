@@ -111,179 +111,161 @@ export default function JudgesPage({ userProfile, showToast }: JudgesPageProps) 
       }
   };
 
+  const handleSave = () => {
+      handleSubmit(new Event('submit'));
+  };
+
   const isAdmin = userProfile?.role === 'admin';
 
   return (
     <div className="max-w-[1400px] mx-auto px-6 py-[60px]">
-       <div className="flex justify-between items-end mb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end mb-12 gap-4">
         <div>
-            <h1 className="text-5xl md:text-[48px] mb-2 bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
+            <h1 className="text-4xl md:text-[48px] mb-2 text-gray-900 font-semibold">
             Судді SAR
             </h1>
-            <p className="text-lg text-slate-400">Сертифіковані судді з пошуково-рятувальної кінології в Україні</p>
+            <p className="text-lg text-gray-600">Сертифіковані судді з пошуково-рятувальної кінології</p>
         </div>
-        {isAdmin && (
-            <button onClick={openAddModal} className="px-4 py-2 bg-indigo-600 rounded-lg text-white flex gap-2 items-center hover:bg-indigo-500 transition-colors"><Plus size={20} /> Додати</button>
+        {userProfile?.role === 'admin' && (
+            <Button onClick={openAddModal} className="w-full sm:w-auto px-6 py-3 bg-[#007AFF] hover:bg-[#0066CC] text-white rounded-xl gap-2 h-auto text-[16px] font-bold font-normal">
+                <Plus size={20} /> Додати суддю
+            </Button>
         )}
-       </div>
+      </div>
 
-       {judges.length === 0 ? (
-           <div className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border-2 border-dashed border-[rgba(99,102,241,0.3)] rounded-[20px] p-[100px_40px] text-center">
-                <Scale className="w-16 h-16 mx-auto mb-5 opacity-50 text-slate-500" />
-                <p className="text-lg text-slate-500">Немає доступних даних про суддів</p>
-           </div>
-       ) : (
-            <div className="grid gap-6">
-                {judges.map(judge => (
-                    <div key={judge.id} className="bg-[rgba(30,41,59,0.5)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.2)] rounded-2xl p-6 hover:border-indigo-500/50 transition-all hover:shadow-[0_0_30px_rgba(99,102,241,0.15)]">
-                        <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                                <h3 className="text-2xl text-white mb-3">{judge.name}</h3>
-                                <div className="flex flex-wrap gap-3 mb-4">
-                                    <span className="px-3 py-1.5 bg-indigo-500/20 text-indigo-300 rounded-lg text-sm border border-indigo-500/30">
-                                        {judge.rank}
-                                    </span>
-                                    <span className="flex items-center gap-2 text-slate-400">
-                                        <MapPin size={16} className="text-indigo-400" />
-                                        {judge.city}
-                                    </span>
-                                </div>
-                                {(judge.phone || judge.email) && (
-                                    <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-slate-700/50">
-                                        {judge.phone && (
-                                            <a href={`tel:${judge.phone}`} className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors w-fit">
-                                                <Phone size={16} className="text-indigo-400" />
-                                                <span className="text-base">{judge.phone}</span>
-                                            </a>
-                                        )}
-                                        {judge.email && (
-                                            <a href={`mailto:${judge.email}`} className="flex items-center gap-2 text-slate-400 hover:text-indigo-400 transition-colors w-fit">
-                                                <Mail size={16} className="text-indigo-400" />
-                                                <span className="text-base">{judge.email}</span>
-                                            </a>
-                                        )}
-                                    </div>
-                                )}
+      {judges.length === 0 ? (
+        <div className="bg-white shadow-sm rounded-[20px] p-[100px_40px] text-center">
+            <Scale className="w-16 h-16 mx-auto mb-5 opacity-50 text-gray-400" />
+            <p className="text-lg text-gray-500">Немає доданих суддів</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {judges.map(judge => (
+                <div key={judge.id} className="bg-white shadow-sm rounded-2xl p-6 hover:shadow-lg transition-all">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="flex-1">
+                            <h3 className="text-xl text-gray-900 mb-1 font-semibold">{judge.name}</h3>
+                            <p className="text-base text-blue-600 font-medium">{judge.rank}</p>
+                        </div>
+                        {userProfile?.role === 'admin' && (
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={() => openEditModal(judge)}
+                                    className="p-2 bg-blue-100 text-blue-700 hover:bg-blue-200 border-none rounded-lg cursor-pointer transition-all"
+                                >
+                                    <Edit2 size={16} />
+                                </button>
+                                <button
+                                    onClick={() => handleDelete(judge.id)}
+                                    className="p-2 bg-red-100 text-red-700 hover:bg-red-200 border-none rounded-lg cursor-pointer transition-all"
+                                >
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
-                            {isAdmin && (
-                                <div className="flex gap-2">
-                                    <button 
-                                        onClick={() => openEditModal(judge)} 
-                                        className="p-2 text-indigo-400 hover:text-indigo-300 hover:bg-indigo-500/10 rounded-lg transition-colors"
-                                        title="Редагувати"
-                                    >
-                                        <Edit2 size={20} />
-                                    </button>
-                                    <button 
-                                        onClick={() => handleDelete(judge.id)} 
-                                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-colors"
-                                        title="Видалити"
-                                    >
-                                        <Trash2 size={20} />
-                                    </button>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
-                ))}</div>
-       )}
-       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-            <DialogContent className="sm:max-w-[600px] bg-[rgba(30,41,59,0.98)] backdrop-blur-[20px] border border-[rgba(99,102,241,0.3)] text-white">
-                <DialogHeader>
-                    <DialogTitle className="text-2xl bg-gradient-to-br from-white to-indigo-300 bg-clip-text text-transparent">
-                        {editingJudge ? 'Редагування судді' : 'Додати суддю'}
-                    </DialogTitle>
-                    <DialogDescription className="text-sm text-slate-400">
-                        {editingJudge ? 'Оновіть інформацію про суддю' : 'Додайте нову суддю'}
-                    </DialogDescription>
-                </DialogHeader>
-                <form onSubmit={handleSubmit}>
-                    <div className="grid gap-5 py-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="name" className="text-gray-200 text-base">
-                                ПІБ судді <span className="text-red-400">*</span>
-                            </Label>
-                            <Input 
-                                id="name" 
-                                value={formData.name} 
-                                onChange={(e) => setFormData({ ...formData, name: e.target.value })} 
-                                className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                                placeholder="Іванов Іван Іванович"
-                                required
-                            />
+                    
+                    <div className="space-y-2 text-gray-600 text-base">
+                        <div className="flex items-center gap-2">
+                            <MapPin size={16} className="text-gray-400 flex-shrink-0" />
+                            <span>{judge.city}</span>
                         </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="rank" className="text-gray-200 text-base">
-                                Ранг <span className="text-red-400">*</span>
-                            </Label>
-                            <Input 
-                                id="rank" 
-                                value={formData.rank} 
-                                onChange={(e) => setFormData({ ...formData, rank: e.target.value })} 
-                                className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                                placeholder="КСУ 1, FCI 2, тощо"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="city" className="text-gray-200 text-base">
-                                Місто <span className="text-red-400">*</span>
-                            </Label>
-                            <Input 
-                                id="city" 
-                                value={formData.city} 
-                                onChange={(e) => setFormData({ ...formData, city: e.target.value })} 
-                                className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                                placeholder="Київ"
-                                required
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="phone" className="text-gray-200 text-base">
-                                Телефон
-                            </Label>
-                            <Input 
-                                id="phone" 
-                                type="tel"
-                                value={formData.phone} 
-                                onChange={(e) => setFormData({ ...formData, phone: e.target.value })} 
-                                className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                                placeholder="+380 XX XXX XX XX"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label htmlFor="email" className="text-gray-200 text-base">
-                                Email
-                            </Label>
-                            <Input 
-                                id="email" 
-                                type="email"
-                                value={formData.email} 
-                                onChange={(e) => setFormData({ ...formData, email: e.target.value })} 
-                                className="w-full bg-[rgba(15,23,42,0.5)] border border-[rgba(99,102,241,0.3)] text-white placeholder:text-slate-500 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
-                                placeholder="email@example.com"
-                            />
-                        </div>
+                        {judge.phone && (
+                            <div className="flex items-center gap-2">
+                                <Phone size={16} className="text-gray-400 flex-shrink-0" />
+                                <a href={`tel:${judge.phone}`} className="text-[#007AFF] hover:text-[#0066CC] no-underline">
+                                    {judge.phone}
+                                </a>
+                            </div>
+                        )}
+                        {judge.email && (
+                            <div className="flex items-center gap-2">
+                                <Mail size={16} className="text-gray-400 flex-shrink-0" />
+                                <a href={`mailto:${judge.email}`} className="text-[#007AFF] hover:text-[#0066CC] no-underline break-all">
+                                    {judge.email}
+                                </a>
+                            </div>
+                        )}
                     </div>
-                    <DialogFooter className="gap-3 mt-6">
-                        <Button 
-                            type="button" 
-                            variant="outline"
-                            onClick={() => setIsModalOpen(false)}
-                            className="bg-[rgba(255,255,255,0.05)] text-white border border-[rgba(99,102,241,0.3)] hover:bg-[rgba(99,102,241,0.1)] hover:border-[rgba(99,102,241,0.5)]"
-                        >
-                            Скасувати
-                        </Button>
-                        <Button 
-                            type="submit"
-                            className="bg-gradient-to-br from-indigo-500 to-purple-600 text-white border-none shadow-[0_10px_30px_rgba(99,102,241,0.4)] hover:shadow-[0_15px_40px_rgba(99,102,241,0.6)]"
-                        >
-                            {editingJudge ? 'Оновити' : 'Додати'}
-                        </Button>
-                    </DialogFooter>
-                </form>
+                </div>
+            ))}
+        </div>
+      )}
+
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+            <DialogContent className="sm:max-w-[600px] bg-white shadow-xl text-gray-900">
+              <DialogHeader>
+                <DialogTitle className="text-xl font-semibold">{editingJudge ? 'Редагувати суддю' : 'Додати суддю'}</DialogTitle>
+                <DialogDescription className="text-gray-600">
+                  Заповніть дані судді для бази
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name" className="text-gray-900 font-medium">Ім'я та прізвище</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData({...formData, name: e.target.value})}
+                    className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="rank" className="text-gray-900 font-medium">Ранг</Label>
+                  <Input
+                    id="rank"
+                    value={formData.rank}
+                    onChange={(e) => setFormData({...formData, rank: e.target.value})}
+                    placeholder="Наприклад: Суддя національної категорії"
+                    className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="city" className="text-gray-900 font-medium">Місто</Label>
+                  <Input
+                    id="city"
+                    value={formData.city}
+                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                    required
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="phone" className="text-gray-900 font-medium">Телефон</Label>
+                  <Input
+                    id="phone"
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+380"
+                    className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="email" className="text-gray-900 font-medium">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="bg-white border-gray-300 text-gray-900 focus:border-[#007AFF]"
+                  />
+                </div>
+              </div>
+              
+              <DialogFooter>
+                <Button variant="outline" onClick={() => setIsModalOpen(false)} className="border-gray-300 text-gray-700 hover:bg-gray-100">
+                  Скасувати
+                </Button>
+                <Button onClick={handleSave} className="bg-[#007AFF] hover:bg-[#0066CC] text-white">
+                  {editingJudge ? 'Зберегти' : 'Додати'}
+                </Button>
+              </DialogFooter>
             </DialogContent>
-        </Dialog>
+      </Dialog>
     </div>
   );
 }
