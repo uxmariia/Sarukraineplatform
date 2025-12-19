@@ -819,7 +819,7 @@ app.get(`${BASE_PATH}/rating`, async (c) => {
             console.log(`[Rating] Processing competition: ${comp.name}, Participants: ${comp.participants.length}`);
             
             for (const participant of comp.participants) {
-                console.log(`[Rating] Participant: userId=${participant.userId}, dogId=${participant.dogId}, category=${participant.category}, class=${participant.class}, status=${participant.status}, total=${participant.results?.total}`);
+                console.log(`[Rating] Participant: userId=${participant.userId}, dogId=${participant.dogId}, category=${participant.category}, class=${participant.class}, status=${participant.status}, total=${participant.results?.total}`)
                 
                 // Filter by discipline - check 'class' field which is the source of truth
                 // Normalize for comparison: lowercase
@@ -835,6 +835,35 @@ app.get(`${BASE_PATH}/rating`, async (c) => {
                 // Only confirmed participants with results
                 if (participant.status !== 'confirmed' || !participant.results?.total) {
                     console.log(`[Rating] Skipping - status=${participant.status}, has total=${!!participant.results?.total}`);
+                    continue;
+                }
+                
+                // Calculate qualification to check minimum requirements
+                const search = participant.results.search || 0;
+                const obedience = participant.results.obedience || 0;
+                let qualification = 'Не класифіковано';
+                
+                // Check minimum requirements: search >= 140 AND obedience >= 70
+                if (search < 140 || obedience < 70) {
+                    qualification = 'Недостатньо';
+                } else {
+                    const total = search + obedience;
+                    if (total >= 0 && total <= 209.5) {
+                        qualification = 'Недостатньо';
+                    } else if (total >= 210 && total <= 239.5) {
+                        qualification = 'Задовільно';
+                    } else if (total >= 240 && total <= 269.5) {
+                        qualification = 'Добре';
+                    } else if (total >= 270 && total <= 285.5) {
+                        qualification = 'Дуже добре';
+                    } else if (total >= 286 && total <= 300) {
+                        qualification = 'Відмінно';
+                    }
+                }
+                
+                // Exclude participants with "Недостатньо" from rating
+                if (qualification === 'Недостатньо') {
+                    console.log(`[Rating] Skipping - qualification is "Недостатньо" (search=${search}, obedience=${obedience})`);
                     continue;
                 }
                 

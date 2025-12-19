@@ -123,6 +123,37 @@ export default function ResultsPage({ showToast }: ResultsPageProps) {
                         confirmedParticipants.forEach(p => {
                             const key = p.class || 'Без класу';
                             
+                            // Recalculate qualification with minimum thresholds
+                            if (p.results && (p.results.search !== undefined || p.results.obedience !== undefined)) {
+                                const search = p.results.search || 0;
+                                const obedience = p.results.obedience || 0;
+                                const total = search + obedience;
+                                
+                                let qualification = 'Не класифіковано';
+                                
+                                // Check minimum requirements: search >= 140 AND obedience >= 70
+                                if (search < 140 || obedience < 70) {
+                                    qualification = 'Недостатньо';
+                                } else if (total >= 0 && total <= 209.5) {
+                                    qualification = 'Недостатньо';
+                                } else if (total >= 210 && total <= 239.5) {
+                                    qualification = 'Задовільно';
+                                } else if (total >= 240 && total <= 269.5) {
+                                    qualification = 'Добре';
+                                } else if (total >= 270 && total <= 285.5) {
+                                    qualification = 'Дуже добре';
+                                } else if (total >= 286 && total <= 300) {
+                                    qualification = 'Відмінно';
+                                }
+                                
+                                // Update results with recalculated values
+                                p.results = {
+                                    ...p.results,
+                                    total,
+                                    qualification
+                                };
+                            }
+                            
                             if (p.results && (p.results.search || p.results.obedience || p.results.total || p.results.place)) {
                                 // Has results (any score or place)
                                 if (!groupsWithResults[key]) groupsWithResults[key] = [];

@@ -40,6 +40,9 @@ export default function App() {
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
         console.error('[App] Error getting initial session:', error);
+        // Clear any corrupted session
+        supabase.auth.signOut({ scope: 'local' });
+        return;
       }
       
       console.log('[App] Initial session check:', { 
@@ -58,6 +61,9 @@ export default function App() {
       } else {
         console.log('[App] No active session - user needs to login');
       }
+    }).catch((err) => {
+      console.error('[App] Unexpected error in getSession:', err);
+      supabase.auth.signOut({ scope: 'local' });
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
@@ -107,18 +113,27 @@ export default function App() {
         
         if (expiresAt && expiresAt < now + 60) {
           console.log('[fetchProfile] Token expiring soon, refreshing session...');
-          const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
           
-          if (refreshError || !newSession) {
-            console.error('[fetchProfile] Failed to refresh session:', refreshError);
-            await supabase.auth.signOut();
+          try {
+            const { data: { session: newSession }, error: refreshError } = await supabase.auth.refreshSession();
+            
+            if (refreshError || !newSession) {
+              console.error('[fetchProfile] Failed to refresh session:', refreshError);
+              await supabase.auth.signOut({ scope: 'local' });
+              setIsLoggedIn(false);
+              setUserProfile(null);
+              return;
+            }
+            
+            token = newSession.access_token;
+            console.log('[fetchProfile] ✓ Session refreshed successfully');
+          } catch (refreshErr) {
+            console.error('[fetchProfile] Refresh session threw error:', refreshErr);
+            await supabase.auth.signOut({ scope: 'local' });
             setIsLoggedIn(false);
             setUserProfile(null);
             return;
           }
-          
-          token = newSession.access_token;
-          console.log('[fetchProfile] ✓ Session refreshed successfully');
         } else {
           token = session.access_token;
         }
@@ -133,18 +148,25 @@ export default function App() {
       if (e.message && (e.message.includes('401') || e.message.includes('Unauthorized'))) {
           console.error('Profile fetch failed - unauthorized. Verifying session...');
           
-          // Try to refresh session
-          const { data: { session }, error } = await supabase.auth.refreshSession();
-          
-          if (!session || error) {
-              console.error('No valid session found, signing out');
-              await supabase.auth.signOut();
-              setIsLoggedIn(false);
-              setUserProfile(null);
-          } else {
-              console.log('Session refreshed, retrying profile fetch...');
-              // Retry once with fresh token
-              setTimeout(() => fetchProfile(session.access_token), 500);
+          try {
+            // Try to refresh session
+            const { data: { session }, error } = await supabase.auth.refreshSession();
+            
+            if (!session || error) {
+                console.error('No valid session found, signing out');
+                await supabase.auth.signOut({ scope: 'local' });
+                setIsLoggedIn(false);
+                setUserProfile(null);
+            } else {
+                console.log('Session refreshed, retrying profile fetch...');
+                // Retry once with fresh token
+                setTimeout(() => fetchProfile(session.access_token), 500);
+            }
+          } catch (refreshErr) {
+            console.error('Refresh session failed, signing out:', refreshErr);
+            await supabase.auth.signOut({ scope: 'local' });
+            setIsLoggedIn(false);
+            setUserProfile(null);
           }
       } else if (e.message && e.message.includes('503')) {
           // Server is temporarily unavailable (likely restarting), retry after delay

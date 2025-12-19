@@ -41,32 +41,46 @@ export const apiRequest = async (endpoint: string, method = 'GET', body?: any, t
     // Try to get session token only for protected endpoints
     console.log('[apiRequest] No token provided, attempting to get session...');
     
-    // First, try getSession
-    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-    
-    if (sessionError) {
-      console.error('[apiRequest] Error getting session:', sessionError);
-    }
-    
-    if (session?.access_token) {
-      token = session.access_token;
-      console.log('[apiRequest] ✓ Got token from getSession');
-    } else {
-      // If no session, try refreshing
-      console.log('[apiRequest] No session found, trying to refresh...');
-      const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+    try {
+      // First, try getSession
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (refreshError) {
-        console.error('[apiRequest] Error refreshing session:', refreshError);
+      if (sessionError) {
+        console.error('[apiRequest] Error getting session:', sessionError);
       }
       
-      if (refreshedSession?.access_token) {
-        token = refreshedSession.access_token;
-        console.log('[apiRequest] ✓ Got token from refreshSession');
+      if (session?.access_token) {
+        token = session.access_token;
+        console.log('[apiRequest] ✓ Got token from getSession');
       } else {
-        console.error('[apiRequest] CRITICAL: No token available after all attempts for', endpoint);
-        console.log('[apiRequest] User needs to log in again');
+        // If no session, try refreshing
+        console.log('[apiRequest] No session found, trying to refresh...');
+        
+        try {
+          const { data: { session: refreshedSession }, error: refreshError } = await supabase.auth.refreshSession();
+          
+          if (refreshError) {
+            console.error('[apiRequest] Error refreshing session:', refreshError);
+            // Clear corrupted session
+            await supabase.auth.signOut({ scope: 'local' });
+          }
+          
+          if (refreshedSession?.access_token) {
+            token = refreshedSession.access_token;
+            console.log('[apiRequest] ✓ Got token from refreshSession');
+          } else {
+            console.error('[apiRequest] CRITICAL: No token available after all attempts for', endpoint);
+            console.log('[apiRequest] User needs to log in again');
+          }
+        } catch (refreshErr) {
+          console.error('[apiRequest] Refresh session threw error:', refreshErr);
+          // Clear corrupted session
+          await supabase.auth.signOut({ scope: 'local' });
+        }
       }
+    } catch (err) {
+      console.error('[apiRequest] Unexpected error in session handling:', err);
+      await supabase.auth.signOut({ scope: 'local' });
     }
   } else if (isPublic && !token) {
     console.log('[apiRequest] ℹ️ Public endpoint, using ANON_KEY');

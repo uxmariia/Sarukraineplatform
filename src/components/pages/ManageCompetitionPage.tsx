@@ -143,7 +143,39 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
                     assignedClass = category || data.level;
                 }
 
-                processedParticipants.push({ ...p, category, class: assignedClass });
+                // Recalculate qualification for existing results to apply new rules
+                let updatedResults = p.results;
+                if (updatedResults && (updatedResults.search !== undefined || updatedResults.obedience !== undefined)) {
+                    const search = updatedResults.search || 0;
+                    const obedience = updatedResults.obedience || 0;
+                    const total = search + obedience;
+                    
+                    // Auto-calculate qualification with minimum thresholds
+                    let qualification = 'Не класифіковано';
+                    
+                    // Check minimum requirements: search >= 140 AND obedience >= 70
+                    if (search < 140 || obedience < 70) {
+                        qualification = 'Недостатньо';
+                    } else if (total >= 0 && total <= 209.5) {
+                        qualification = 'Недостатньо';
+                    } else if (total >= 210 && total <= 239.5) {
+                        qualification = 'Задовільно';
+                    } else if (total >= 240 && total <= 269.5) {
+                        qualification = 'Добре';
+                    } else if (total >= 270 && total <= 285.5) {
+                        qualification = 'Дуже добре';
+                    } else if (total >= 286 && total <= 300) {
+                        qualification = 'Відмінно';
+                    }
+                    
+                    updatedResults = {
+                        ...updatedResults,
+                        total,
+                        qualification
+                    };
+                }
+
+                processedParticipants.push({ ...p, category, class: assignedClass, results: updatedResults });
             });
 
             setParticipants(processedParticipants);
@@ -221,13 +253,23 @@ export default function ManageCompetitionPage({ competitionId, onBack, showToast
                 const obedience = newResults.obedience || 0;
                 const total = search + obedience;
                 
-                // Auto-calculate qualification
+                // Auto-calculate qualification with minimum thresholds
                 let qualification = 'Не класифіковано';
-                if (total >= 0 && total <= 209.5) qualification = 'Недостатньо';
-                else if (total >= 210 && total <= 239.5) qualification = 'Задовільно';
-                else if (total >= 240 && total <= 269.5) qualification = 'Добре';
-                else if (total >= 270 && total <= 285.5) qualification = 'Дуже добре';
-                else if (total >= 286 && total <= 300) qualification = 'Відмінно';
+                
+                // Check minimum requirements: search >= 140 AND obedience >= 70
+                if (search < 140 || obedience < 70) {
+                    qualification = 'Недостатньо';
+                } else if (total >= 0 && total <= 209.5) {
+                    qualification = 'Недостатньо';
+                } else if (total >= 210 && total <= 239.5) {
+                    qualification = 'Задовільно';
+                } else if (total >= 240 && total <= 269.5) {
+                    qualification = 'Добре';
+                } else if (total >= 270 && total <= 285.5) {
+                    qualification = 'Дуже добре';
+                } else if (total >= 286 && total <= 300) {
+                    qualification = 'Відмінно';
+                }
 
                 // If any field is undefined (cleared), clear total/qual
                 if (newResults.search === undefined && newResults.obedience === undefined) {
